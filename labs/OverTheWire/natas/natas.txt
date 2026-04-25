@@ -28,4 +28,5 @@
 27 - 28: 1JNwQM1Oi6J6j1k49Xyw7ZN6pXMQInVj // you need to create a user longer than 64 bytes and then log into it without the char at the end (null bytes and a normal char at the end). i did not find it by myself. i watched a walkthrough. i feel like iam stupid.
 28 - 29: 31F4j3Qi2PnuhIZQokxXk1L3QT9Cppns // Walkthrough. its very interesting though.
 29 - 30: WQhx1BvcmP9irs2MP9tRnLsNaDI76YrH // i used a walkthough and learned a lot. i should have fuzzed and find out that | does stuff. i should have used url encoding because i am dealing with a url. then i should have just understand my pwd and ls -la and understand the filtering. the payload is that http://natas29.natas.labs.overthewire.org/index.pl?file=%7Ccat%20%2Fetc%2F%2A_webpass%2F%2A30%3B which is also |cat /etc/*_webpass/*30;
-pretty simpke once finding out with burpsuite.
+pretty simple once finding out with burpsuite.
+30 - 31: // 
