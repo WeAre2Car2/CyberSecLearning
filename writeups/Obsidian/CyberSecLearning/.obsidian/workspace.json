@@ -1,0 +1,221 @@
+{
+  "main": {
+    "id": "b4e180072e33c631",
+    "type": "split",
+    "children": [
+      {
+        "id": "f9b13e86f188c5b5",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "3fc045f8108a03f3",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Natas/Natas 31.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Natas 31"
+            }
+          },
+          {
+            "id": "702dbeff253d95e7",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "The Linux Command Line by William Shotts.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "The Linux Command Line by William Shotts"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "634a7aebfabb76d7",
+    "type": "split",
+    "children": [
+      {
+        "id": "48a5680ad33efe88",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2bd4efad94347855",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "416a521fc345388e",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "0d55def428a82fe3",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "545245c6913d8c70",
+    "type": "split",
+    "children": [
+      {
+        "id": "d56059c9c1a5d200",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2a604e3095342822",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "The Linux Command Line by William Shotts.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for The Linux Command Line by William Shotts"
+            }
+          },
+          {
+            "id": "aa42c499e61e218f",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "The Linux Command Line by William Shotts.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from The Linux Command Line by William Shotts"
+            }
+          },
+          {
+            "id": "b6f3ce7be4bf2ed8",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "8c7c983665623b18",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "8891ab1488f2189b",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "The Linux Command Line by William Shotts.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of The Linux Command Line by William Shotts"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "2bd4efad94347855",
+  "lastOpenFiles": [
+    "Natas/Natas 31.md",
+    "The Linux Command Line by William Shotts.md",
+    "Linux",
+    "Natas/Natas Passes.md",
+    "Welcome.md",
+    "Natas",
+    "PortSwigger Academy/Web LLM attacks.md",
+    "PortSwigger Academy/OS command injection/OS command injection.md",
+    "PortSwigger Academy/Server-side vulnerabilities/Authentication.md",
+    "PortSwigger Academy/Server-side vulnerabilities/File upload vulnerabilities.md",
+    "PortSwigger Academy/OS command injection",
+    "PortSwigger Academy/Web cache deception/Web caches.md",
+    "PortSwigger Academy/Server-side vulnerabilities",
+    "PortSwigger Academy/Web cache deception",
+    "PortSwigger Academy",
+    "Untitled.canvas",
+    "2026-04-25.md"
+  ]
+}
