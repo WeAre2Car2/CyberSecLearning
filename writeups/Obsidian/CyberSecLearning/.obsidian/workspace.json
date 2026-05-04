@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "The Linux Command Line by William Shotts.md",
+                "file": "Windows/UnderTheWire.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "The Linux Command Line by William Shotts"
+              "title": "UnderTheWire"
             }
           }
         ],
@@ -198,10 +198,13 @@
       "bases:Create new base": false
     }
   },
-  "active": "2bd4efad94347855",
+  "active": "702dbeff253d95e7",
   "lastOpenFiles": [
+    "Windows/Get started with Windows PowerShell.md",
+    "Windows/UnderTheWire.md",
+    "Linux/The Linux Command Line by William Shotts.md",
+    "Windows",
     "Natas/Natas 31.md",
-    "The Linux Command Line by William Shotts.md",
     "Linux",
     "Natas/Natas Passes.md",
     "Welcome.md",
