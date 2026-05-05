@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Windows/UnderTheWire.md",
+                "file": "Windows/UnderTheWire - Century.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "UnderTheWire"
+              "title": "UnderTheWire - Century"
             }
           }
         ],
@@ -198,10 +198,10 @@
       "bases:Create new base": false
     }
   },
-  "active": "702dbeff253d95e7",
+  "active": "2bd4efad94347855",
   "lastOpenFiles": [
     "Windows/Get started with Windows PowerShell.md",
-    "Windows/UnderTheWire.md",
+    "Windows/UnderTheWire - Century.md",
     "Linux/The Linux Command Line by William Shotts.md",
     "Windows",
     "Natas/Natas 31.md",
