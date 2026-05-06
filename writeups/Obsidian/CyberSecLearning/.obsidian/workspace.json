@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Windows/UnderTheWire - Century.md",
+                "file": "Windows/UnderTheWire - Cyborg.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "UnderTheWire - Century"
+              "title": "UnderTheWire - Cyborg"
             }
           }
         ],
@@ -198,10 +198,11 @@
       "bases:Create new base": false
     }
   },
-  "active": "2bd4efad94347855",
+  "active": "702dbeff253d95e7",
   "lastOpenFiles": [
-    "Windows/Get started with Windows PowerShell.md",
     "Windows/UnderTheWire - Century.md",
+    "Windows/UnderTheWire - Cyborg.md",
+    "Windows/Get started with Windows PowerShell.md",
     "Linux/The Linux Command Line by William Shotts.md",
     "Windows",
     "Natas/Natas 31.md",
