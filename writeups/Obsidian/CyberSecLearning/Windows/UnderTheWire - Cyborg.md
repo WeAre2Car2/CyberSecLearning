@@ -35,3 +35,5 @@ cyborg2@cyborg.underthewire.tech:kansas
 
 Well, this is getting into sys admin, which rn i dont mind it. Ill move to networking.
 This was fun. I am not sure if its enough, but its a lot better than nothing! :)
+
+Perhaps me using Google is cheating? IDK and IDC actually. I learned from it, and it's for my own benefit. 
