@@ -1,0 +1,1 @@
+Fuck That i am not doing a full course on how to use the program. Ill learn on the way. Its a waste of time.

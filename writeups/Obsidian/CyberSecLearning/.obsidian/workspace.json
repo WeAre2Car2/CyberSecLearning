@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Networking/Cisco Networking Academy  -  Getting Started with Cisco Packet Tracer.md",
+                "file": "Networking/Cisco Networking Academy - Networking Basics.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Cisco Networking Academy  -  Getting Started with Cisco Packet Tracer"
+              "title": "Cisco Networking Academy - Networking Basics"
             }
           }
         ],
@@ -200,8 +200,9 @@
   },
   "active": "fa521b34612db15b",
   "lastOpenFiles": [
-    "Networking/Cisco Networking Academy - Networking Basics.md",
+    "Pasted image 20260519202411.png",
     "Networking/Cisco Networking Academy  -  Getting Started with Cisco Packet Tracer.md",
+    "Networking/Cisco Networking Academy - Networking Basics.md",
     "Windows/UnderTheWire - Cyborg.md",
     "Networking",
     "Windows/UnderTheWire - Century.md",
