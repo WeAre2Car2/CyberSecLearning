@@ -72,3 +72,26 @@ Internet
 Network Access
 
 Ethernet - IP - TCP - HTTP
+
+  
+# 9.1.1 Video - IPv4 Unicast, Broadcast, Multicast
+
+Unicast - a way to send packet to one singular device.
+**Note:** In this course, all communication between devices is unicast unless otherwise noted.
+
+IPv4 unicast host addresses are in the address range of 1.1.1.1 to 223.255.255.255. However, within this range are many addresses that are reserved for special purposes. These special purpose addresses will be discussed later in this module.
+
+**Note**: In the animation, notice that the subnet mask for 255.255.255.0 is represented using slash notion or /24. This indicates that the subnet mask is 24 bits long. The subnet mask 255.255.255.0 in binary is 11111111.11111111.11111111.00000000.
+
+Broadcast - Every device on the network will receive the packet.
+
+Multicast - Only a selected few devices on the network will receive the packet, if selected.
+A multicast packet is a packet with a destination IP address that is a multicast address. ==IPv4 has reserved the 224.0.0.0 to 239.255.255.255 addresses as a multicast range.==
+**Private IPv4 Ranges:**
+
+- **Class A:** `10.0.0.0` to `10.255.255.255`
+- **Class B:** `172.16.0.0` to `172.31.255.255`
+- **Class C:** `192.168.0.0` to `192.168.255.255`
+
+_Note: Addresses starting with `100.64.x.x` through `100.127.x.x` are also private, typically used by Internet Service Providers (ISPs) for Carrier-Grade NAT (CGNAT)._
+
