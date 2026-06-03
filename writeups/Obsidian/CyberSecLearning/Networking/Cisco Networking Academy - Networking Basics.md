@@ -95,3 +95,28 @@ A multicast packet is a packet with a destination IP address that is a multicast
 
 _Note: Addresses starting with `100.64.x.x` through `100.127.x.x` are also private, typically used by Internet Service Providers (ISPs) for Carrier-Grade NAT (CGNAT)._
 
+# Module 10: IPv6 Addressing Formats and Rules
+(31.5.26 16:23)
+
+# Module 11: Dynamic Addressing with DHCP
+(1.6.26 13:26)
+11.1.1 Static IPv4 Address Assignment
+
+IPv4 addresses can be assigned either statically or dynamically.
+
+With a static assignment, the network administrator must manually configure the network information for a host. At a minimum, this includes the following:
+
+- **IP address** - This identifies the host on the network.
+- **Subnet mask** - This is used to identify the network on which the host is connected.
+- **Default gateway** - This identifies the networking device that the host uses to access the internet or another remote network.
+
+Static addresses have some advantages. For instance, they are useful for printers, servers, and other networking devices that need to be accessible to clients on the network. If hosts normally access a server at a particular IPv4 address, it would not be good if that address changed.
+
+Static assignment of addressing information can provide increased control of network resources, but it can be time consuming to enter the information on each host. When IPv4 addresses are entered statically, the host only performs basic error checks on the IPv4 address. Therefore, errors are more likely to occur.
+
+When using static IPv4 addressing, it is important to maintain an accurate list of which IPv4 addresses are assigned to which devices. Additionally, these are permanent addresses and are not normally reused.
+
+# Module 12: Gateways to Other Networks
+(3.6.26 13:00)
+12.3.3 Gateways to Other Networks Quiz
+I got a 100%. two tries with 91% beforehand. I searched up on Google a bit to know more about NAT and what it does and how it works. It's kinda interesting, though I am interested in CyberSec and it's just one aspect.
