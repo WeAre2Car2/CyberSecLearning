@@ -120,3 +120,7 @@ When using static IPv4 addressing, it is important to maintain an accurate list 
 (3.6.26 13:00)
 12.3.3 Gateways to Other Networks Quiz
 I got a 100%. two tries with 91% beforehand. I searched up on Google a bit to know more about NAT and what it does and how it works. It's kinda interesting, though I am interested in CyberSec and it's just one aspect.
+
+# Module 13: The ARP Process
+15:33
+I understand that learning this kinda takes me off my written roadmap. Its more than enough already. But it does excite me a bit to learn about this. I understand the internet a bit better. I need to learn about OSI a lot better, to understand it deeply. Not only for CyberSec, but for myself too. To understand something deeply, is powerful. 
