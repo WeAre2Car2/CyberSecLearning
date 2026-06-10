@@ -124,3 +124,36 @@ I got a 100%. two tries with 91% beforehand. I searched up on Google a bit to kn
 # Module 13: The ARP Process
 15:33
 I understand that learning this kinda takes me off my written roadmap. Its more than enough already. But it does excite me a bit to learn about this. I understand the internet a bit better. I need to learn about OSI a lot better, to understand it deeply. Not only for CyberSec, but for myself too. To understand something deeply, is powerful. 
+
+7.6.26 22:32
+
+ARP is used when a computer knows the ipv4 address but not the MAC address. It sends an ARP request through broadcast on the network.
+
+13.2.5 ARP (Address Resolution Protocol)
+
+ARP uses a three step process to discover and store the MAC address of a host on the local network when only the IPv4 address of the host is known:
+
+1. The sending host creates and sends a frame addressed to a broadcast MAC address. Contained in the frame is a message with the IPv4 address of the intended destination host.
+2. Each host on the network receives the broadcast frame and compares the IPv4 address inside the message with its configured IPv4 address. The host with the matching IPv4 address sends its MAC address back to the original sending host.
+3. The sending host receives the message and stores the MAC address and IPv4 address information in a table called an ARP table.
+
+When the sending host has the MAC address of the destination host in its ARP table, it can send frames directly to the destination without doing an ARP request. Because ARP messages rely on broadcast frames to deliver the requests, all hosts in the local IPv4 network must be in the same broadcast domain.
+
+# Module 14: Routing Between Networks
+9.6.26 16:34
+
+Reasons for dividing a network:
+1. To make smaller broadcast domains
+2. for security reasons, not to reveal the devices to the whole network
+3. devices are moving away/to another location
+
+# Module 15: TCP and UDP
+10.6.26 20:37
+
+TCP and UDP are transport layer protocols. 
+UDP (Think, YouTube) is used for streaming and voIP, stuff that wont be extremely damaged if one or a few packets will get lost here and there.
+TCP is far more secure and ensures delivery by acknowledgment.
+There are 65,535 ports.
+Well Known Ports: 1 - 1023
+Registered Ports: 1024 - 49151
+Private Ports: 49152 - 65535
