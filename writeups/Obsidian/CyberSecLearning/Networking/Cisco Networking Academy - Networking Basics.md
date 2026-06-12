@@ -157,3 +157,16 @@ There are 65,535 ports.
 Well Known Ports: 1 - 1023
 Registered Ports: 1024 - 49151
 Private Ports: 49152 - 65535
+
+# Module 16: Application Layer Services
+12.6.26 18:37
+
+its a long one.
+
+## 16.7.2 Email Protocols
+i don't know anything about this.
+SMTP is used for sending mail.
+POP3 is used by the mail server to receive and store mail.
+IMAP4 receives and stores mail, and keeps the mail, unlike POP.
+
+Exam: 91%
