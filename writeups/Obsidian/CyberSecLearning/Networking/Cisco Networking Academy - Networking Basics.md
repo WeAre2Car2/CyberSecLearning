@@ -170,3 +170,17 @@ POP3 is used by the mail server to receive and store mail.
 IMAP4 receives and stores mail, and keeps the mail, unlike POP.
 
 Exam: 91%
+
+# Module 17: Network Testing Utilities
+12.6.26 19:33
+
+Last module!
+I got a 90%. 
+
+13.6.26 13:15
+just finished the Checkpoint Exam: Protocols for Specific Tasks with 90%.
+Lets do the final exam!
+14:13 I got a 78%. Not great, but enough for networking basics for now. I think.
+Well done to me for finishing it. It took a while, but I am doing other stuff atm, I know what they are but I cannot share them. Plus, i know it may look like I am satisfied with an average score, I'm not. It's just not my current goal.
+Also i got an 80 on the knowledge exam, started with 23. I gained a lot from this course.
+What's next? maybe create a few networking projects. 
