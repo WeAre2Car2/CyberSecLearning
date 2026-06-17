@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Networking/Cisco Networking Academy - Networking Basics.md",
+                "file": "Networking/Projects/Python Port Scanner with Socket.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Cisco Networking Academy - Networking Basics"
+              "title": "Python Port Scanner with Socket"
             }
           }
         ],
@@ -200,9 +200,12 @@
   },
   "active": "fa521b34612db15b",
   "lastOpenFiles": [
+    "Networking/Cisco/Cisco Networking Academy  -  Getting Started with Cisco Packet Tracer.md",
+    "Networking/Projects/Python Port Scanner with Socket.md",
+    "Networking/Projects",
+    "Networking/Cisco/Cisco Networking Academy - Networking Basics.md",
+    "Networking/Cisco",
     "Pasted image 20260519202411.png",
-    "Networking/Cisco Networking Academy - Networking Basics.md",
-    "Networking/Cisco Networking Academy  -  Getting Started with Cisco Packet Tracer.md",
     "Windows/UnderTheWire - Cyborg.md",
     "Networking",
     "Windows/UnderTheWire - Century.md",
