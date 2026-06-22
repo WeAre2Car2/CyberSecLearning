@@ -27,7 +27,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Networking/Projects/Python Port Scanner with Socket.md",
+                "file": "Networking/Projects/Port Scanner/Python Port Scanner with Socket.md",
                 "mode": "source",
                 "source": false
               },
@@ -200,12 +200,15 @@
   },
   "active": "fa521b34612db15b",
   "lastOpenFiles": [
+    "Networking/Projects/Port Scanner/Port Scanner - Roadmap.md",
+    "Networking/Projects/Port Scanner/Python Port Scanner with Socket.md",
+    "Networking/Projects/Port Scanner",
+    "Welcome.md",
+    "Pasted image 20260519202411.png",
     "Networking/Cisco/Cisco Networking Academy  -  Getting Started with Cisco Packet Tracer.md",
-    "Networking/Projects/Python Port Scanner with Socket.md",
     "Networking/Projects",
     "Networking/Cisco/Cisco Networking Academy - Networking Basics.md",
     "Networking/Cisco",
-    "Pasted image 20260519202411.png",
     "Windows/UnderTheWire - Cyborg.md",
     "Networking",
     "Windows/UnderTheWire - Century.md",
@@ -215,7 +218,6 @@
     "Natas/Natas 31.md",
     "Linux",
     "Natas/Natas Passes.md",
-    "Welcome.md",
     "Natas",
     "PortSwigger Academy/Web LLM attacks.md",
     "PortSwigger Academy/OS command injection/OS command injection.md",
@@ -225,7 +227,6 @@
     "PortSwigger Academy/Web cache deception/Web caches.md",
     "PortSwigger Academy/Server-side vulnerabilities",
     "PortSwigger Academy/Web cache deception",
-    "PortSwigger Academy",
     "Untitled.canvas",
     "2026-04-25.md"
   ]
