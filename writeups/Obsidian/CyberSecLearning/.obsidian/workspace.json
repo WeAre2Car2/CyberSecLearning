@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Networking/Cisco Networking Academy - Networking Basics.md",
+                "file": "Natas/Natas Again.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Cisco Networking Academy - Networking Basics"
+              "title": "Natas Again"
             }
           },
           {
@@ -35,8 +35,7 @@
               "title": "Python Port Scanner with Socket"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -198,10 +197,14 @@
       "bases:Create new base": false
     }
   },
-  "active": "fa521b34612db15b",
+  "active": "702dbeff253d95e7",
   "lastOpenFiles": [
-    "Networking/Projects/Port Scanner/Port Scanner - Roadmap.md",
+    "Natas/Natas Passes.md",
+    "Natas/Natas Again.md",
+    "Natas/Natas 31.md",
+    "CyberSec PLAN.md",
     "Networking/Projects/Port Scanner/Python Port Scanner with Socket.md",
+    "Networking/Projects/Port Scanner/Port Scanner - Roadmap.md",
     "Networking/Projects/Port Scanner",
     "Welcome.md",
     "Pasted image 20260519202411.png",
@@ -215,9 +218,7 @@
     "Windows/Get started with Windows PowerShell.md",
     "Linux/The Linux Command Line by William Shotts.md",
     "Windows",
-    "Natas/Natas 31.md",
     "Linux",
-    "Natas/Natas Passes.md",
     "Natas",
     "PortSwigger Academy/Web LLM attacks.md",
     "PortSwigger Academy/OS command injection/OS command injection.md",
