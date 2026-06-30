@@ -426,6 +426,72 @@ natas21
 7meHZ1l2zPoK2v1qfTUxq4Ydfja4UlmU
 
 There are two pages. One is a regular one which will change once i enter an admin session, the other one I can just change the colors of the page. My guess is session injection or newline injection from the fields in the other page.
+YES!
+So what i did was capture the request on each pages.
+I added admin=1 to the POST request. Then i copied that cookie to the main page to use the same session. And i got this:
+You are an admin. The credentials for the next level are:
+Username: natas22
+Password: 964laB0r7TuDqJj5b3HFtwsQoc0GhjBF
 
+###### natas22
+natas22
+964laB0r7TuDqJj5b3HFtwsQoc0GhjBF
 
+We are met with an empty page. It will print the credentials once I am admin.
+I will get admin once I invoke the revelio session.
+I send a request of ?revelio=1
+When I intercept the response it showed me the credentials!
+Username: natas23
+Password: CH1OBxJy8uAxMM15Nx6VXSMwcJbBbnS5
+
+the login in this levels is that if I am not admin when invoking the revelio function, it should redirect me immediately. Because I was able to capture the response before the redirection, it trusted that only admin can invoke the function. Or something like that.
+
+###### natas23
+natas23
+CH1OBxJy8uAxMM15Nx6VXSMwcJbBbnS5
+
+we need to input the password iloveyou but also make it 10 chars long.
+using the regular browser with spaces doesn't work.
+I'll search on stack exchange.
+Oh! once I tried to treat passwd as an array I got this
+**Warning**: strstr() expects parameter 1 to be string, array given in **/var/www/natas/natas23/index.php** on line **23**
+Maybe this is the way to solve it?
+Also, in the code `$_REQUEST["passwd"] > 10` this is comparing strings to numbers.
+
+[natas23.natas.labs.overthewire.org/?passwd=11iloveyou](http://natas23.natas.labs.overthewire.org/?passwd=11iloveyou)
+The credentials for the next level are:  
+
+Username: natas24 Password: shlL4BvOtawNCd81dwdKRHFzmTEjYYQX
+
+Here we both have 11 > 10 and iloveyou! Payload by me ofc.
+
+###### natas24
+natas24
+shlL4BvOtawNCd81dwdKRHFzmTEjYYQX
+
+`<?php    if(array_key_exists("passwd",$_REQUEST)){`  
+        `if(!strcmp($_REQUEST["passwd"],"<censored>")){`  
+            `echo "<br>The credentials for the next level are:<br>";`  
+            `echo "<pre>Username: natas25 Password: <censored></pre>";`  
+        `}`  
+        `else{`  
+            `echo "<br>Wrong!<br>";`  
+        `}`  
+    `}    // morla / 10111`  
+`?>`
+
+I will try something similar.
+[natas24.natas.labs.overthewire.org/?passwd[]=11iloveyou](http://natas24.natas.labs.overthewire.org/?passwd[]=11iloveyou)
+The credentials for the next level are:  
+
+Username: natas25 Password: UJEF5OAHF1eW3lqkpdCDM7ow4syzh4oo
+
+Another example of type juggling.
+
+###### natas25
+natas25
+UJEF5OAHF1eW3lqkpdCDM7ow4syzh4oo
+
+This website blocks path traversal from the languege selection.
+I do remember something with the user agent, but I am not going to do it now. I am going to it. Probably poison the log by changing the user agent to /etc/natas_webpass/natas26 or something.
 
