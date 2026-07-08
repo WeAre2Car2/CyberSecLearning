@@ -668,3 +668,109 @@ IDK!
 ###### natas28
 natas28
 Hy5wZLfVml7jnGmuvfbilRTUUkk29Dv3
+7.7.26
+So we are met with a search engine for jokes I assume? We can search for values in the searchbar. For example, I can search for "programming" and it will give me the only joke with that word in it.
+Lets try some SQL injections.
+Nothing really seemed to work.
+I remember that the url is changing based on the search content.
+I will use a python script to try and understand when and why it changes...
+
+A - http://natas28.natas.labs.overthewire.org/search.php/?query=G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPKjd8MKDZZIiKG51FNeoPjUvfoQVOxoUVz5bypVRFkZR5BPSyq%2FLC12hqpypTFRyXA%3D
+AA - http://natas28.natas.labs.overthewire.org/search.php/?query=G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPKYsNYgsg1hFJebd%2BJNix06SHmaB7HSm1mCAVyTVcLgDq3tm9uspqc7cbNaAQ0sTFc%3D
+AAA - http://natas28.natas.labs.overthewire.org/search.php/?query=G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPJ8EmoxKU1njKubmw7%2BRDt1mi4rXbbzHxmhT3Vnjq2qkEJJuT5N6gkJR5mVucRLNRo%3D
+AAAA - http://natas28.natas.labs.overthewire.org/search.php/?query=G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPK02918sQNUadassvlSAHDHKSh%2FPMVHnhLmbzHIY7GAR1bVcy3Ix3D2Q5cVi8F6bmY%3D
+AAAAA - http://natas28.natas.labs.overthewire.org/search.php/?query=G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPJLk0xdEarIh%2BMvTkV61TlvrDuHHBxEg4a0XNNtno9y9GVRSbu6ISPYnZVBfqJ%2FOns%3D
+AAAAAA - http://natas28.natas.labs.overthewire.org/search.php/?query=G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPJ%2BDZedSJQqwrZX9tfUGM7WQcCYxLrNxe2TV1ZOUQXdfmTQ3MhoJTaSrfy9N5bRv4o%3D
+" or 1=1 - http://natas28.natas.labs.overthewire.org/search.php/?query=G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPKjUmCHmyVLENLHC2NhDYGVoJUi8wHPnTascCPxZZSMWpc5zZBSL6eob5V3O1b5%2BMA%3D
+admin'-- - http://natas28.natas.labs.overthewire.org/search.php/?query=G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPJMGfRt3GNyJrUOdnBE6rq8oJUi8wHPnTascCPxZZSMWpc5zZBSL6eob5V3O1b5%2BMA%3D
+hello my name is vlad! - http://natas28.natas.labs.overthewire.org/search.php/?query=G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPKuz6MtnpN1Dw0ZHR0VWCB%2FbAJBNQ%2BR8aVgNGZwPAUuEkHAmMS6zcXtk1dWTlEF3X5k0NzIaCU2kq38vTeW0b%2BK
+
+Code is in the python file.
+Looks like if we do sql injection the end of the url is the same.
+The start is always the same.
+I remember you could inject some commands into the url.
+Lets try to decode what changed in the dirty, SQL injection url.
+8.7.26 9:25
+We got a clue. This is AES cypher, which is 16 bytes blocks.
+With chat explaining a bit (this is how we solve today!)
+this is probbaly something like:
+fixed_prefix || user_input || fixed_suffix || padding
+
+Here are a few search queries in hex, to see its bytes. Since its in 16 bytes blocks, I will try to decypher and understand the mechanics.
+
+If - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf2133dc8b2f857cc139674e5f577a0fab848799a07b1d29b5982015c9355c2e00eaded9bdbaca6a73b71b35a010d2c4c57
+Be - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf21ba087a9ae0c9f42b2b663f9c4be054548799a07b1d29b5982015c9355c2e00eaded9bdbaca6a73b71b35a010d2c4c57
+Bec - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf255d2bd212ce61f7fc26e5a0d258f5e709a2e2b5db6f31f19a14f75678eadaa904249b93e4dea0909479995b9c44b351a
+Abe - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf26b2d42368e0dbcb4cac25fbd0e61b84b9a2e2b5db6f31f19a14f75678eadaa904249b93e4dea0909479995b9c44b351a
+OBOL - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf2dc64e9b3eebf5f357b632bba4a6721ce29287f3cc5479e12e66f31c863b1804756d5732dc8c770f64397158bc17a6e66
+Dudu - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf2ee81daea4cf3a32f30b9f9ad812f63a329287f3cc5479e12e66f31c863b1804756d5732dc8c770f64397158bc17a6e66
+" or 1=1 -- - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf2f0d12560b7879c12abc3c9866b3fdfae2287d631f55813124b774a2219de3f4a75fd5044fd063d26f6bb7f734b41c899
+Qqqqqqqqqqq - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf2070bdd4684c4270354b8f08f7cb5480e68b151738d0187c720487ee2912fdb22ca8cf4e610913abae39a067619204a5a
+Qqqqqqqqqqk - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf2070bdd4684c4270354b8f08f7cb5480edfc9113cd04d1d65b06c7a624629a828ca8cf4e610913abae39a067619204a5a
+" or 1=2 -- - 1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf23a3af555d3f9f1e46f405fda038b29cc2287d631f55813124b774a2219de3f4a75fd5044fd063d26f6bb7f734b41c899
+
+Lets compare these
+
+
+![[Pasted image 20260708165333.png]]
+
+Ok. I ran all these tests and I think I understand whats going on.
+The start is the same. Then we have a part that changes according to input, and in the end I assume there is a part that takes length and if there is an SQLi attempt.
+How about I will switch the dirty part in the SQLi to a clean part, with the same length?
+lets switch the bytes between the SQLi and the Qqqq.. part.
+
+1be82511a7ba5bfd578c0eef466db59c dc84728fdcf89d93751d10a7c75c8cf2 f0d12560b7879c12abc3c9866b3fdfae ca8cf4e610913abae39a067619204a5a
+
+2287d631f55813124b774a2219de3f4a75fd5044fd063d26f6bb7f734b41c899
+
+4 parts of 16 bytes. First two are the same. Then the dirty part, then the clean part.
+
+Base64 - G+glEae6W/1XjA7vRm21nNyEco/c+J2TdR0Qp8dcjPLw0SVgt4ecEqvDyYZrP9+uyoz05hCROrrjmgZ2GSBKWg==
+
+URL encode - G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPLw0SVgt4ecEqvDyYZrP9%2Buyoz05hCROrrjmgZ2GSBKWg%3D%3D
+
+We got nothing...
+
+Fuck.
+I am too hungry for this. I am taking a break.
+
+19:10
+Both of these are the same length of search.
+I am going to change every block between the normal search and the SQLi until i get a hit.
+
+" or 1=1 --:
+1be82511a7ba5bfd578c0eef466db59c dc84728fdcf89d93751d10a7c75c8cf2 f0d12560b7879c12abc3c9866b3fdfae 2287d631f55813124b774a2219de3f4a 75fd5044fd063d26f6bb7f734b41c899
+
+Qqqqqqqqqqq:
+1be82511a7ba5bfd578c0eef466db59c dc84728fdcf89d93751d10a7c75c8cf2 070bdd4684c4270354b8f08f7cb5480e 68b151738d0187c720487ee2912fdb22 ca8cf4e610913abae39a067619204a5a
+
+Payload1: (3 blocks end are dirty)
+
+1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf2
+(this part is always the same)
+f0d12560b7879c12abc3c9866b3fdfae 2287d631f55813124b774a2219de3f4a 75fd5044fd063d26f6bb7f734b41c899
+
+Nope
+
+Payload2: (2 blocks end are dirty)
+
+1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf2
+(this part is always the same, last is normal)
+f0d12560b7879c12abc3c9866b3fdfae 2287d631f55813124b774a2219de3f4a ca8cf4e610913abae39a067619204a5a
+
+Nope
+
+Payload2: (2 blocks end are dirty)
+
+1be82511a7ba5bfd578c0eef466db59cdc84728fdcf89d93751d10a7c75c8cf2
+(this part is always the same, last is normal)
+f0d12560b7879c12abc3c9866b3fdfae 2287d631f55813124b774a2219de3f4a ca8cf4e610913abae39a067619204a5a
+
+20:21
+I asked chat to generate all combos possible, there are 8.
+Will test.
+
+I tried all. It did not work.
+
+I read a walkthrough. It was close, but not enough.
+MEH.
