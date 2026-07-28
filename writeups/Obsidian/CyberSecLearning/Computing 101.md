@@ -51,3 +51,56 @@ will declare when to start the execution. By default, it starts from the first l
 Nothing fancy. Basic stuff. Finished this Module.
 
 ## Computer Memory
+(27.7.26)
+##### Memory
+Each memory locations is 1 byte.
+0x1000
+to
+0x7fffffffffff
+###### Stack
+The stack lives in the memory and operates like the stack you know. You push and pop values, or addresses into it. Think about a pistol clip.
+The address of the stack is stored at rsp. The address of the stack changes according to its size.
+
+A lot more was explained, like little endian and about how to know where to store data in the memory with math. I don't grasp it 100%, but I think the challenges will help.
+
+##### Loading From Memory
+I used the notes from previous lectures and it was easy.
+
+##### More Loading Practice
+This time, I'll try to use the notes as less as possible.
+
+##### Dereferencing with Offsets
+(28.7.26 14:15)
+Fairly simple. Like accessing an array.
+
+##### Stored Addresses
+Instead of storing values at addresses only, we can store addresses in adresses to point at values.
+"I'll store a secret value at a secret address, then store that secret address at the address `567800`. You must read the address, dereference it, get the secret value, and then `exit` with it as the exit code. You got this!"
+
+so the address of the adress of the secret is 567800.
+Fairly simple.
+
+##### Double Dereferencing
+It was again, fairly simple. I shall continue learning today.
+
+## The Stack
+(28.7.26 16:00)
+##### The Stack
+In this challenge we learned that \[rsp] holds the number of args that is passed to the program. IDK why yet.
+
+##### Stack Offsets
+We will learn to use stack offsets with \[rsp + N]
+
+##### Program Arguments on the Stack
+This one seems a but tough. IDK. It seems simple but I guess I'll just try it out.
+I got it a bit wrong the first time.
+\[rsp] - argc (arg counter)
+\[rsp + 8] - arg\[0] usually the program name
+\[rsp + 16] - arg\[1] the first arg
+
+##### Popping From the Stack
+I need to use pop to get argc, or \[rsp] .
+I will mov it to rdi and exit with it.
+So it was pretty basic. I am quite afraid/excited to the more advanced stuff.
+
+
