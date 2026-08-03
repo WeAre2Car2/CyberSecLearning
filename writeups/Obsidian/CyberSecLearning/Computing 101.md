@@ -103,4 +103,77 @@ I need to use pop to get argc, or \[rsp] .
 I will mov it to rdi and exit with it.
 So it was pretty basic. I am quite afraid/excited to the more advanced stuff.
 
+## Nibbling on Numbers
+(29.7.26)
+##### Data
+We use HEX to represent binary numbers because its in the power of 2 and it aligns quite well.
+His lectures are LONG! Very good, but long. Plus, I'm kinda sick so it's even harder.
+(30.7.26)
+##### Negative Numbers
+so if the number starts with 1 its a negative, 0 is positive. to find the flip number you flip the bits and add one bit.
 
+01001010 is 74
+10110101 flipped
+10110110 + 1 bit = -74
+Understood.
+
+1010111110001010
+0101000001110101
+0101000001110110
+11011101 11010100 01110111 11100100
+00100010 00101011 10001000 00011011
+00100010001010111000100000011100
+
+##### Encoding Negatives
+30 - 11110
+00001 + 1 = 01000
+13 - 00001101
+11110011
+
+##### Binary and Hex Encoding
+(2.8.26 13:36)
+A single hex digit is 4 bits.
+A byte is 8 bits.
+So basically you split it and encode each half to hex.
+1111 0110
+F6
+1001 1000
+98
+EZ
+
+##### More Hex
+Basically the same.
+I cannot start any challenge though. The website has an issue of some sort.
+20:45 
+Seems to be working again. Lets finish this module and go to sleep!
+0011 0000 1110 1010 0000 0110
+30EA06
+1001 1001 0001 1110 1000 1100
+991E8C
+
+##### Mixed Conversions
+Did that too. Basically I have to remember that to get the signed value of X i gotta do 256 - X.
+
+## Software Introspection
+3.8.26 9:58
+Lets Go!!!
+
+##### Disassembling Programs
+`objdump -d` to disassemble a program back to assembly.
+We have to add `-M intel` to specify using intel infrastructure.
+in this challenge, we need to submit the value of rdi before it's being wiped.
+
+##### Tracing Syscalls
+Lets run it.
+EZ
+
+##### Starting GDB
+As simple as it can be.
+`gdb`
+
+##### Quitting GDB
+Same.
+`quit`
+
+##### Starting Programs in GDB
+`starti`
