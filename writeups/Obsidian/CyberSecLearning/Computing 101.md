@@ -177,3 +177,143 @@ Same.
 
 ##### Starting Programs in GDB
 `starti`
+
+##### Disassembling in GDB
+`disassemble`
+
+##### Stepping Through Instructions
+`stepi` to execute one command at a time. Even though the disassembly is censored, the value is still loaded to the CPU.
+Worked the second time around. First time it gave me a value of 0.
+
+##### Reading Register Values
+1. Start the program with `starti`
+2. Step one instruction with `stepi` (or `si`)
+3. Read the register yourself with `print $rdi`
+Ill add the solution just to show you (or me) that I did solve it. So far it's not challenging, just educational. I assume it will be much harder.
+###### Code:
+`ubuntu@introspecting~reading-register-values:~$ gdb /challenge/debug-me`
+`GNU gdb (Ubuntu 15.1-1ubuntu1~24.04.1) 15.1`
+`Copyright (C) 2024 Free Software Foundation, Inc.`
+`License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>`
+`This is free software: you are free to change and redistribute it.`
+`There is NO WARRANTY, to the extent permitted by law.`
+`Type "show copying" and "show warranty" for details.`
+`This GDB was configured as "x86_64-linux-gnu".`
+`Type "show configuration" for configuration details.`
+`For bug reporting instructions, please see:`
+`<https://www.gnu.org/software/gdb/bugs/>.`
+`Find the GDB manual and other documentation resources online at:`
+    `<http://www.gnu.org/software/gdb/documentation/>.`
+
+`For help, type "help".`
+`Type "apropos word" to search for commands related to "word"...`
+`Reading symbols from /challenge/debug-me...`
+`(No debugging symbols found in /challenge/debug-me)`
+`Warning: 'set logging on', an alias for the command 'set logging enabled', is deprecated.`
+`Use 'set logging enabled on'.`
+
+`(gdb) starti`
+
+`Dump of assembler code for function main:`
+`=> 0x0000000000401000 <+0>:     mov    rdi,CENSORED`
+   `0x0000000000401007 <+7>:     mov    rdi,0x0`
+   `0x000000000040100e <+14>:    mov    rax,0x3c`
+   `0x0000000000401015 <+21>:    syscall`
+`End of assembler dump.`
+
+`HACKER: The disassembly is CENSORED! Use 'stepi' to execute the first instruction.`
+`0x0000000000401000 in main ()`
+`(gdb) stepi`
+
+`Dump of assembler code for function main:`
+   `0x0000000000401000 <+0>:     mov    rdi,CENSORED`
+`=> 0x0000000000401007 <+7>:     mov    rdi,0x0`
+   `0x000000000040100e <+14>:    mov    rax,0x3c`
+   `0x0000000000401015 <+21>:    syscall`
+`End of assembler dump.`
+
+`HACKER: You just executed 'mov rdi, CENSORED' --- the secret is now in rdi!`
+`HACKER: Use 'print $rdi' to read the register value!`
+`HACKER: When you're done, quit GDB with 'quit' (or 'q').`
+`0x0000000000401007 in main ()`
+`(gdb) print $rdi`
+`$1 = 31546`
+`(gdb) quit`
+`ubuntu@introspecting~reading-register-values:~$ /challenge/submit-number 31546`
+`CORRECT! Here is your flag:`
+
+
+##### Setting Register Values
+`set` command sets a value for a register.
+I completed the level. its 10:51, Imma take a short break.
+
+##### Popping Stack Values
+Basically the same but with pop rdi.
+
+##### Examining Memory
+This time the secret isn't loaded into a register. Its argc, but we get it by examining the memory itself. How? Let's find out.
+`x $rsp`
+###### Code:
+`ubuntu@introspecting~examining-memory:~$ gdb /challenge/debug-me`
+`GNU gdb (Ubuntu 15.1-1ubuntu1~24.04.1) 15.1`
+`Copyright (C) 2024 Free Software Foundation, Inc.`
+`License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>`
+`This is free software: you are free to change and redistribute it.`
+`There is NO WARRANTY, to the extent permitted by law.`
+`Type "show copying" and "show warranty" for details.`
+`This GDB was configured as "x86_64-linux-gnu".`
+`Type "show configuration" for configuration details.`
+`For bug reporting instructions, please see:`
+`<https://www.gnu.org/software/gdb/bugs/>.`
+`Find the GDB manual and other documentation resources online at:`
+    `<http://www.gnu.org/software/gdb/documentation/>.`
+
+`For help, type "help".`
+`Type "apropos word" to search for commands related to "word"...`
+`Reading symbols from /challenge/debug-me...`
+`(No debugging symbols found in /challenge/debug-me)`
+`Warning: 'set logging on', an alias for the command 'set logging enabled', is deprecated.`
+`Use 'set logging enabled on'.`
+
+`(gdb) starti`
+
+`Dump of assembler code for function main:`
+`=> 0x0000000000401000 <+0>:     mov    rdi,0x0`
+   `0x0000000000401007 <+7>:     mov    rax,0x3c`
+   `0x000000000040100e <+14>:    syscall`
+`End of assembler dump.`
+
+`0x0000000000401000 in main ()`
+`(gdb) x/d $rsp`
+`0x7fffffffe6a0: 123`
+`(gdb) quit`
+`ubuntu@introspecting~examining-memory:~$ /challenge/submit-number 123`
+`CORRECT! Here is your flag:`
+
+##### Examining Stack Pointers
+This is how to get the address of the first argument of the program:
+`x/a $rsp+16`
+Then to display the data as a string we do:
+`x/s 0x7ffc001c4750`, assuming this is the address.
+
+##### Cooperative Debugging
+`int3` is basically a brekapoint. Like the red dot in VS Code.
+Did the challenge. I should read the instructions more carefully.
+
+##### Running with Arguments
+ubuntu@introspecting~running-with-arguments:~$ /challenge/debug-me pwn
+{flag}
+
+Ok...
+
+##### Redirecting Input in GDB
+I ran /challenge/debug-me with gdb.
+Then, inside the debgger, I ran the command with input from /challenge/secret with:
+`run < /challenge/secret`
+Then it did some stuff, downloaded something? debuginfod
+It gave me the secret number which I fed into /challenge/submit-number and got the flag.
+
+It's 13:53 now. I finished this module.
+
+## Output and Input
+(4.8.26)
