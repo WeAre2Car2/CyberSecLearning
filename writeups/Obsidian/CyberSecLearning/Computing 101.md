@@ -317,3 +317,196 @@ It's 13:53 now. I finished this module.
 
 ## Output and Input
 (4.8.26)
+##### System Calls
+This is supposed to be pretty low level!
+Writing only assembly and Linux system calls.
+0 is read, 1 is write. There are more than 300 syscalls.
+##### Writing Output
+*Of course, the solution to this is to write multiple characters at the same time. The `write` system call does this by taking two parameters for the "what": a where (in memory) to start writing from and a how many characters to write. These parameters are passed as the second and third parameters to `write`. In the kinda-C syntax that we learned from `strace`, this would be:*
+
+```c
+write(file_descriptor, memory_address, number_of_characters_to_write)
+```
+
+*For a more concrete example, if you wanted to write 10 characters starting from some memory address to standard output (file descriptor 1), this would be:*
+
+```c
+write(1, memory_address, 10);
+```
+
+*Wow, that's simple! Now, how do we actually specify these parameters?*
+
+1. *We'll pass the first parameter of a system call, as we reviewed above, in the `rdi` register.*
+2. *We'll pass the second parameter via the `rsi` register. The agreed-upon convention in Linux is that `rsi` is used as the second parameter to system calls.*
+3. *We'll pass the third parameter via the `rdx` register. This is the most confusing part of this entire module: `rdi` (the register holding the first parameter) has such a similar name to `rdx` that it's really easy to mix up and, unfortunately, the naming is this way for historic reasons and is here to stay. Oh well... It's just something we have to be careful about. Maybe a mnemonic like "`rdi` is the **i**nitial parameter while `rdx` is the **x**tra parameter"? Or just think of it as having to keep track of different friends with similar names, and you'll be fine.*
+
+*And, of course, the `write` syscall index into `rax` itself: `1`. Other than the `rdi` vs `rdx` confusion, this is really easy!*
+
+Ok, I did the challenge. In the beginning I didn't quite understand but basically I wrote a program that takes an arg and writes it to stdout.
+###### Code:
+`.intel_syntax noprefix`
+`.global _start`
+`_start:`
+`mov rdi, 1`
+`mov rsi, [rsp+16]`
+`mov rdx, 1`
+`mov rax, 1`
+`syscall`
+
+##### Chaining Syscalls
+So I can call syscall twice, usurpingly actually.
+This challenge is jut about exiting with rdi = 42 and setting rax to 60.
+
+##### Writing Strings
+I increased rdx to 64 to write the 64 bytes of the flag.
+
+##### Reading Data
+After some chatting with the Sensei Bot, I got it. the syscall needs the address of the thing I want to read/write, not the value. I kept \[rsp] and I didn't understand what is failing.
+###### Code:
+`.intel_syntax noprefix`
+`.global _start`
+`_start:`
+`mov rdi, 0`
+`mov rsi, rsp`
+`mov rdx, 128`
+`mov rax, 0`
+`syscall`
+`mov rdi, 1`
+`mov rsi, rsp`
+`mov rdx, 128`
+`mov rax, 1`
+`syscall`
+`mov rdi, 42`
+`mov rax, 60`
+`syscall`
+
+##### Reading Exactly
+So far, I knew how much to read and write in terms of bytes. What if it was dynamic?
+After the syscall, Linux return the num of bytes actually read in rax.
+So lets change rdx!
+It worked, but only in the second time.
+rdx should stay at 128, because it will read 128 and will most likely use less bytes to read the flag. After that, we can use rax on rdx because it now has the value of how much was actually read after the syscall.
+###### Code:
+`.intel_syntax noprefix`
+`.global _start`
+`_start:`
+`mov rdi, 0`
+`mov rsi, rsp`
+`mov rdx, 128`
+`mov rax, 0`
+`syscall`
+`mov rdi, 1`
+`mov rsi, rsp`
+`mov rdx, rax`
+`mov rax, 1`
+`syscall`
+`mov rdi, 42`
+`mov rax, 60`
+`syscall`
+
+##### Opening Files
+The registers for `open` follow the same convention:
+
+| Register | Purpose                                  |
+| -------- | ---------------------------------------- |
+| `rax`    | `2` (syscall number for `open`)          |
+| `rdi`    | pointer to the filename string in memory |
+| `rsi`    | `0` (read-only)                          |
+
+only now I got it. A day after. Well, I set on it for 20 minutes and used the sensai AI.
+###### Code:
+`.intel_syntax noprefix`
+`.global _start`
+`_start:`
+`mov rax, 2`
+`mov rdi, [rsp+16]`
+`mov rsi, 0`
+`syscall`
+`mov rdi, rax`
+`mov rsi, rsp`
+`mov rdx, 4096`
+`mov rax, 0`
+`syscall`
+`mov rdx, rax`
+`mov rdi, 1`
+`mov rsi, rsp`
+`mov rax, 1`
+`syscall`
+`mov rax, 60`
+`mov rdi, 42`
+`syscall`
+
+##### Hardcoding the Filename
+A small change from last time.
+###### Code:
+```
+.intel_syntax noprefix
+.global _start
+_start:
+mov rax, 2
+mov BYTE PTR [rsp], '/'
+mov BYTE PTR [rsp+1], 'f'
+mov BYTE PTR [rsp+2], 'l'
+mov BYTE PTR [rsp+3], 'a'
+mov BYTE PTR [rsp+4], 'g'
+mov BYTE PTR [rsp+5], 0
+mov rdi, rsp
+mov rsi, 0
+syscall
+mov rdi, rax
+mov rsi, rsp
+mov rdx, 4096
+mov rax, 0
+syscall
+mov rdx, rax
+mov rdi, 1
+mov rsi, rsp
+mov rax, 1
+syscall
+mov rax, 60
+mov rdi, 42
+syscall
+
+```
+
+##### RIP-Relative Strings
+```asm
+_start:
+    ...
+    lea rdi, [rip+path]
+    ...
+path:
+    .asciz "/flag"
+```
+mov copies bytes
+lea copies the address!
+
+```
+.intel_syntax noprefix
+.global _start
+_start:
+mov rax, 2
+lea rdi, [rip+path]
+mov rsi, 0
+syscall
+mov rdi, rax
+mov rsi, rsp
+mov rdx, 4096
+mov rax, 0
+syscall
+mov rdx, rax
+mov rdi, 1
+mov rsi, rsp
+mov rax, 1
+syscall
+mov rax, 60
+mov rdi, 42
+syscall
+path:
+    .asciz "/flag"
+
+```
+
+## Control Flow
+So far the dude talked about jumping, conditions, looping and functions.
+Kinda hard to read atm, but I'll learn.
