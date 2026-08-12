@@ -510,3 +510,270 @@ path:
 ## Control Flow
 So far the dude talked about jumping, conditions, looping and functions.
 Kinda hard to read atm, but I'll learn.
+##### Comparing Values
+```
+.intel_syntax noprefix
+.global _start
+_start:
+mov rdi, [rsp]
+cmp rdi, 42
+setz dil
+mov rax, 60
+syscall
+
+```
+At first i was confused as to why it worked, bit dil is the smaller brother of rdi. and I only need 0 or 1 here as the exit code. no need to use rdi for the exit code.
+
+##### Comparing Characters
+```
+.intel_syntax noprefix
+.global _start
+_start:
+mov rax, [rsp+16]
+cmp BYTE PTR [rax], 'p'
+setz dil
+mov rax, 60
+syscall
+
+```
+
+##### Conditional Control Flow
+```
+.intel_syntax noprefix
+.global _start
+_start:
+mov rax, [rsp+16]
+cmp BYTE PTR [rax], 'p'
+jne fail
+success:
+    mov rdi, 0
+    mov rax, 60
+    syscall
+fail:
+    mov rdi, 1
+    mov rax, 60
+    syscall
+
+```
+
+##### Comparing Strings
+```
+.intel_syntax noprefix
+.global _start
+_start:
+mov rax, [rsp+16]
+cmp BYTE PTR [rax], 'p'
+jne fail
+cmp BYTE PTR [rax+1], 'w'
+jne fail
+cmp BYTE PTR [rax+2], 'n'
+jne fail
+success:
+    mov rdi, 0
+    mov rax, 60
+    syscall
+fail:
+    mov rdi, 1
+    mov rax, 60
+    syscall
+    
+```
+
+##### Reverse the Password
+I think it's qaty.
+
+##### Conditionals Without Conditionals
+11.8.26 10:18
+After a lot of tries and with the help of sensai, I think I understand.
+The code is a switch case kinda-thingy.
+Each address is +8 bytes.
+We see the address of the success and the original start of the table address.
+Subtract the end from the start, divive by 8 and you get the ascii value of 'w'.
+
+##### Recognizing Loops
+```
+ubuntu@control-flow~recognizing-loops:~$ objdump -d -M intel /challenge/reverse-me
+
+/challenge/reverse-me:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000401000 <_start>:
+  401000:       48 8b 7c 24 10          mov    rdi,QWORD PTR [rsp+0x10]
+  401005:       c6 04 24 4c             mov    BYTE PTR [rsp],0x4c
+  401009:       c6 44 24 01 43          mov    BYTE PTR [rsp+0x1],0x43
+  40100e:       c6 44 24 02 6e          mov    BYTE PTR [rsp+0x2],0x6e
+  401013:       c6 44 24 03 63          mov    BYTE PTR [rsp+0x3],0x63
+  401018:       c6 44 24 04 44          mov    BYTE PTR [rsp+0x4],0x44
+  40101d:       c6 44 24 05 73          mov    BYTE PTR [rsp+0x5],0x73
+  401022:       c6 44 24 06 00          mov    BYTE PTR [rsp+0x6],0x0
+  401027:       48 8d 34 24             lea    rsi,[rsp]
+
+000000000040102b <loop>:
+  40102b:       8a 06                   mov    al,BYTE PTR [rsi]
+  40102d:       3a 07                   cmp    al,BYTE PTR [rdi]
+  40102f:       75 6e                   jne    40109f <fail>
+  401031:       3c 00                   cmp    al,0x0
+  401033:       74 08                   je     40103d <success>
+  401035:       48 ff c7                inc    rdi
+  401038:       48 ff c6                inc    rsi
+  40103b:       eb ee                   jmp    40102b <loop>
+
+000000000040103d <success>:
+  40103d:       c6 04 24 2f             mov    BYTE PTR [rsp],0x2f
+  401041:       c6 44 24 01 66          mov    BYTE PTR [rsp+0x1],0x66
+  401046:       c6 44 24 02 6c          mov    BYTE PTR [rsp+0x2],0x6c
+  40104b:       c6 44 24 03 61          mov    BYTE PTR [rsp+0x3],0x61
+  401050:       c6 44 24 04 67          mov    BYTE PTR [rsp+0x4],0x67
+  401055:       c6 44 24 05 00          mov    BYTE PTR [rsp+0x5],0x0
+  40105a:       48 89 e7                mov    rdi,rsp
+  40105d:       48 c7 c6 00 00 00 00    mov    rsi,0x0
+  401064:       48 c7 c0 02 00 00 00    mov    rax,0x2
+  40106b:       0f 05                   syscall
+  40106d:       48 89 c7                mov    rdi,rax
+  401070:       48 89 e6                mov    rsi,rsp
+  401073:       48 c7 c2 40 00 00 00    mov    rdx,0x40
+  40107a:       48 c7 c0 00 00 00 00    mov    rax,0x0
+  401081:       0f 05                   syscall
+  401083:       48 89 c2                mov    rdx,rax
+  401086:       48 c7 c7 01 00 00 00    mov    rdi,0x1
+  40108d:       48 c7 c0 01 00 00 00    mov    rax,0x1
+  401094:       0f 05                   syscall
+  401096:       48 c7 c0 3c 00 00 00    mov    rax,0x3c
+  40109d:       0f 05                   syscall
+
+000000000040109f <fail>:
+  40109f:       48 c7 c0 3c 00 00 00    mov    rax,0x3c
+  4010a6:       0f 05                   syscall
+ubuntu@control-flow~recognizing-loops:~$ /challenge/reverse-me LCncDs
+
+```
+
+##### Writing Loops
+I need to write a loop. I will reference the previous level ofc.
+
+##### Writing From a Shared Library
+The challenge is confusing
+
+rdi - rsi
+rsi - rdx
+
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    mov rax, rdi
+    mov rdx, rsi
+    mov rdi, 1
+    mov rsi, rax
+    mov rax, 1
+    syscall
+    mov rax, 60
+    mov rdi, 0
+    syscall
+    
+```
+
+##### Returning a Value
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    mov rax, rdi
+    ret
+    mov rdi, 0
+    mov rax, 60
+    syscall
+    
+```
+##### Calling Through a Pointer
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    call rdi
+    ret
+    mov rax, 60
+    syscall
+
+```
+
+##### Calling Through a Pointer with an Argument
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    mov rax, rdi
+    mov rdi, 1337
+    call rax
+    ret
+    mov rax, 60
+    syscall
+
+```
+
+##### Saving Caller-Saved Registers
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    push rax
+    push rcx
+    push rdx
+    push rdi
+    push r8
+    push r9
+    push r10
+    push r11
+    push rsi
+    call rdi
+    pop rsi
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rdi
+    pop rdx
+    pop rcx
+    pop rax
+    call rsi
+    ret
+    mov rax, 60
+    mov rdi, 0
+    syscall
+
+```
+
+##### Saving Callee-Saved Registers
+So doing the same, but om the other side.
+i am still trying to wrap around how does this translate to actual programs.
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    push rbx
+    push rbp
+    push r12
+    push r13
+    push r14
+    push r15
+    mov rbx, 0x1337
+    mov rbp, 0x1337
+    mov r12, 0x1337
+    mov r13, 0x1337
+    mov r14, 0x1337
+    mov r15, 0x1337
+    call rdi
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
+    pop rbx
+    ret
+
+```
+This didn't work for like 20 minutes but worked after re-building it. IDK why.
+DONE!!!
+at 12.8.26 17:20
