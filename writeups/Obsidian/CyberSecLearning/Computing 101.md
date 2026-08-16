@@ -777,3 +777,162 @@ solve:
 This didn't work for like 20 minutes but worked after re-building it. IDK why.
 DONE!!!
 at 12.8.26 17:20
+
+## Endian Escapades
+##### Little-Endian
+Basically, when I write 0x12131415 the computer reads it as 15 14 13 12 because it goes from the least significate byte to the most significate.
+
+##### Memory Order and Register Values
+The easiest place to get turned around is the boundary between memory order and the value printed from a register. Suppose `rdi` points at these eight bytes:
+
+```text
+Address    Byte
+[rdi+0]    41
+[rdi+1]    42
+[rdi+2]    43
+[rdi+3]    44
+[rdi+4]    45
+[rdi+5]    46
+[rdi+6]    47
+[rdi+7]    48
+```
+
+A 64-bit load reads those bytes starting at the lowest address:
+
+```asm
+mov rax, [rdi]
+```
+
+Because x86 is little-endian, `[rdi+0]` becomes the low byte of `rax`, `[rdi+1]` becomes the next byte, and so on. The register value is therefore `0x4847464544434241`. Written as hex, the most-significant byte prints on the left, so the bytes look reversed compared to address order:
+
+```text
+memory address order:  41 42 43 44 45 46 47 48
+register hex order:   48 47 46 45 44 43 42 41
+rax value:            0x4847464544434241
+```
+
+The bytes did not move in memory. The CPU interpreted the byte at the lowest address as the least-significant part of the number.
+
+##### Bytes, Words and Friends
+| Name                 | Bits | Bytes | Partial `rax` Access | Memory Access                             |
+| -------------------- | ---- | ----- | -------------------- | ----------------------------------------- |
+| byte                 | 8    | 1     | `mov al, [rdi]`      | `mov BYTE PTR [rdi], 0x11`                |
+| word                 | 16   | 2     | `mov ax, [rdi]`      | `mov WORD PTR [rdi], 0x1122`              |
+| doubleword (`dword`) | 32   | 4     | `mov eax, [rdi]`     | `mov DWORD PTR [rdi], 0x11223344`         |
+| quadword (`qword`)   | 64   | 8     | `mov rax, [rdi]`     | `mov QWORD PTR [rdi], 0x1122334455667788` |
+
+##### Sign Extension
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    movsx rax, BYTE PTR [rdi] // Takes the first byte of rdi
+								//And saves it in rax as singed
+    ret
+    
+
+```
+
+##### Little-Endian Bytes
+`movabs rbx,0x43785a6d436f6e6f`
+so:
+6f 6e 6f 43 6d 5a 78 43
+onoCmZxC
+
+##### Qword by Qword
+movabs rbx,0x72556147477a314e
+movabs rbx,0x7974485356646b43
+This is stored like that. We need to flip the order of each byte. But the order of the qwords stay intact.
+so:
+4e 31 7a 47 47 61 55 72
+43 6b 64 56 53 48 74 79
+N1zGGaUrCkdVSHty
+
+##### Dword by Dword
+16.8.26 15:24
+eax,0x384d7672 0x72764d38
+eax,0x49646661 0x61666449
+eax,0x514a6e57 0x576e4a51
+eax,0x4c554b66 0x664b554c
+
+rvM8afdIWnJQfKUL
+
+##### Word by Word
+ax,0x3862
+ax,0x6951
+ax,0x5973
+ax,0x4876
+ax,0x3947
+ax,0x7146
+ax,0x5935
+ax,0x4161
+0x62385169735976484739467135596141
+b8QisYvHG9Fq5YaA
+
+##### Byte by Byte
+Nothing to reverse here.
+al,0x48
+al,0x42
+al,0x35
+al,0x6a
+al,0x37
+al,0x48
+al,0x57
+ al,0x4d
+al,0x7a
+al,0x58
+al,0x69
+al,0x32
+al,0x41
+al,0x62
+al,0x6f
+al,0x30
+0x4842356a3748574d7a58693241626f30
+HB5j7HWMzXi2Abo0
+
+##### Cracking a Struct
+rbx,0x4b544c7673367064
+eax,0x79495a54
+ax,0x5557
+al,0x76
+al,0x4f
+
+0x64703673764c544b545a49795755764f
+dp6svLTKTZIyWUvO
+
+##### Scrambled Struct
+In the previous challenge, I could read the registers from top to button because they were checked in order to their place in memory.
+In this challenge, I assume, the order will be scrambled and I will have to read it by \[rdi+X]
+
+```
+0000000000401000 <_start>:
+  401000:       48 8b 7c 24 10          mov    rdi,QWORD PTR [rsp+0x10]
+  401005:       8b 47 08                mov    eax,DWORD PTR [rdi+0x8]
+  401008:       3d 66 76 75 70          cmp    eax,0x70757666
+  40100d:       0f 85 90 00 00 00       jne    4010a3 <fail>
+  401013:       66 8b 47 0c             mov    ax,WORD PTR [rdi+0xc]
+  401017:       66 3d 33 64             cmp    ax,0x6433
+  40101b:       0f 85 82 00 00 00       jne    4010a3 <fail>
+  401021:       48 bb 77 77 56 61 4a    movabs rbx,0x3566394a61567777
+  401028:       39 66 35 
+  40102b:       48 8b 07                mov    rax,QWORD PTR [rdi]
+  40102e:       48 39 d8                cmp    rax,rbx
+  401031:       75 70                   jne    4010a3 <fail>
+  401033:       8a 47 0e                mov    al,BYTE PTR [rdi+0xe]
+  401036:       3c 66                   cmp    al,0x66
+  401038:       75 69                   jne    4010a3 <fail>
+  40103a:       8a 47 0f                mov    al,BYTE PTR [rdi+0xf]
+  40103d:       3c 6e                   cmp    al,0x6e
+  40103f:       75 62                   jne    4010a3 <fail>
+```
+By order:
+rbx,0x3566394a61567777
+eax,0x70757666
+ax,0x6433
+al,0x66
+al,0x6e
+
+0x777756614a396635667675703364666e
+wwVaJ9f5fvup3dfn
+
+DONE!!
