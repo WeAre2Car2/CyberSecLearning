@@ -936,3 +936,165 @@ al,0x6e
 wwVaJ9f5fvup3dfn
 
 DONE!!
+
+## Assembly Assortment
+##### Reverse the Calculation
+I assume we want to submit the original value.
+0x8c - 0x47 = 0x45
+E
+
+##### Reverse the Reverse
+```
+  401000:       48 8b 44 24 10          mov    rax,QWORD PTR [rsp+0x10]
+  401005:       80 28 0d                sub    BYTE PTR [rax],0xd
+  401008:       80 38 27                cmp    BYTE PTR [rax],0x27
+```
+
+so 0x27 + 0xd
+4
+
+##### Dealing with Bitwise Operations
+```
+0000000000401000 <_start>:
+  401000:       48 8b 44 24 10          mov    rax,QWORD PTR [rsp+0x10]
+  401005:       80 30 94                xor    BYTE PTR [rax],0x94
+  401008:       80 38 a7                cmp    BYTE PTR [rax],0xa7
+```
+
+so 0xa7 xor 0x94 should give us the original value
+10100111
+10010100
+00110011
+3 ASCII
+
+##### Even or Odd
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    and rdi, 0b1
+    cmp rdi, 0
+    je  even
+    mov rax, 0
+    ret
+    even:
+        mov rax, 1
+        ret
+
+```
+
+##### Masking Bits
+```
+.intel_syntax noprefix
+.global LOBYTE
+LOBYTE:
+    and rdi, 0xFF
+    mov rax, rdi
+    ret
+    
+```
+
+##### Lowercase a String
+```
+.intel_syntax noprefix
+.global chr_lower
+chr_lower:
+    or rdi, 0x20
+    mov rax, rdi
+    ret
+    
+```
+
+##### Uppercase a String
+I totally used an LLM to understand it.
+
+```
+.intel_syntax noprefix
+.global str_upper
+str_upper:
+
+.loop:
+    cmp BYTE PTR [rdi], 0x0
+    je done
+
+    and BYTE PTR [rdi], 0xDF
+    inc rdi
+    jmp .loop
+
+done:
+    mov rax, rdi
+    ret
+
+```
+
+##### Swap Case
+```
+.intel_syntax noprefix
+.global str_swapcase
+str_swapcase:
+
+.loop:
+    cmp BYTE PTR [rdi], 0x0
+    je done
+    xor BYTE PTR [rdi], 0x20
+    inc rdi
+    jmp .loop
+
+done:
+    mov rax, rdi
+    ret
+
+```
+
+##### Shifting Left
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    mov rdi, rax
+    shl rax, 4
+    ret
+
+
+```
+This does rax times 16, because 4 to the power of 2 is 16.
+
+##### Shifting Right
+This does root. I assume.
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    mov rax, rdi
+    shr rax, 8
+    and rax, 0xFF
+    ret
+
+```
+
+##### Guide: Reading Stored Data in GDB
+Back in [Opening the Flag, with RIP](https://pwn.college/computing-101/hello-hackers/open-read-write-rip-relative), you used a label and `lea` to pass the address of stored bytes to `open`. In [Examining Memory with GDB](https://pwn.college/computing-101/introspecting/gdb-examine-argv1), you used `x/s` to display the string at an address.
+
+The next challenge combines those ideas in a binary you are reversing. The binary has already done the `lea`-style work for you: one of its registers will hold the runtime address of a stored string. Instead of looking for every secret byte as an immediate inside a `cmp`, step through the code until a register points at the stored string, then examine that address as a string:
+
+```gdb
+(gdb) x/s $rsi
+```
+
+Here, `$rsi` is just an example register. Use the register that the binary loads with the stored string's address, then run `/challenge/reverse-me` directly with the string you found.
+
+##### Loops on Data
+So far, the values you've been reversing have been embedded directly in instructions as immediate operands. However, this challenge compares the first program argument against a hardcoded string inside the challenge. The string lives in a different section of the program file: the binary's `.rodata` (read-only data) section, rather than in the instructions themselves.
+
+There are several options to find it:
+
+- The most familiar: `stepi` to where the comparison is happening and `x` the registers pointing to the data.
+- Use `strings /challenge/reverse-me` to list all printable strings in the binary. There are a lot, but one of them will be the password.
+- Use `objdump -s -j .rodata /challenge/reverse-me` to dump the raw contents of the `.rodata` section.
+
+Which you use is up to you!
+
+I used gdb and I `layout asm`
+and `x/s $rsi` or whatever it was.
+
+DONE?
