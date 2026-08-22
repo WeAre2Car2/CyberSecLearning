@@ -1098,3 +1098,245 @@ I used gdb and I `layout asm`
 and `x/s $rsi` or whatever it was.
 
 DONE?
+
+## The Stack, Revisited
+##### Reaching Into the Caller's Frame
+I am building a function that grabs the flag from the calling function, but this data isn't handed to me. This level teaches you to kinda RCE..?
+So to my understanding, all the data lives on the stack. Well, not ALL of the data, but because the function that calls my function has the flag in it, and it is on the stack, it is readable by my function as well.
+The flag will be at a higher address, because the more you add to the stack, the smaller address you get at the start of it.
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    lea rdi, [rsp + 0x40]
+    mov rdx, 0
+    count_loop: // Code to calculate size of flag and store it in rdx
+        cmp BYTE PTR [rdi + rdx], 0x0
+        je write_data
+        inc rdx
+        jmp count_loop
+    write_data:
+        mov rdi, 1
+        lea rsi, [rsp + 0x40]
+        mov rax, 1
+        syscall
+    mov rdi, 42
+    mov rax, 60
+    syscall
+
+```
+I should definitely remember the comment I wrote here. Its a basic and important thing to get in my mind! A basic loop to get rdx out of any length of value to print.
+
+##### Loading Stale Stack Data
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    call rdi
+    mov rax, qword ptr [rsp-0x10]
+    ret
+```
+
+##### Stealing Stale Stack Data
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    call rdi
+    lea rdi, [rsp - 0x88]
+    mov rdx, 0
+    count_loop: // Code to calculate size of flag and store it in rdx
+        cmp BYTE PTR [rdi + rdx], 0x0
+        je write_data
+        inc rdx
+        jmp count_loop
+    write_data:
+        mov rdi, 1
+        lea rsi, [rsp - 0x88]
+        mov rax, 1
+        syscall
+        ret
+
+
+```
+
+##### Reserving Your Own Frame
+I will learn how to reserve my own frame of data on the stack.
+We sub rsp with how many bytes we want, fill them up with 0 to initlize them and then add back the bytes we sub to return for a correct return address (or sum like that).
+
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    mov rcx, 0
+    sub rsp, 256
+    init_bytes:
+        mov byte ptr [rsp+rcx], 0
+        cmp rcx, 255
+        je success
+        inc rcx
+        jmp init_bytes
+    success:
+        add rsp, 256
+        ret
+
+
+```
+
+##### Using Your Own Frame
+I am very confused. Very much so.
+```
+.intel_syntax noprefix
+.global solve
+solve:
+    mov rcx, 0
+    mov r8, 0
+    mov r9, 0
+    sub rsp, 256
+    mov rax, 0
+    init_bytes:
+        mov byte ptr [rsp+rcx], 0
+        cmp rcx, 255
+        je count_bytes
+        inc rcx
+        jmp init_bytes
+    count_bytes:
+        mov cl, byte ptr [rdi+r8]
+        mov byte ptr [rsp+rcx], 1
+        inc r8
+        cmp r8, rsi
+        je compare_bytes
+        jmp count_bytes
+
+    compare_bytes:
+    cmp r9, 256
+    je success
+
+    cmp byte ptr [rsp+r9], 0
+    je next_slot
+    inc rax
+    next_slot:
+        inc r9
+        jmp compare_bytes
+    success:    
+        add rsp, 256
+        ret
+
+```
+Took some time and debugging with Sensai.
+
+##### Environment Variables on the Stack
+The flag will be as an environmental variable at \[rsp+24]
+```
+.intel_syntax noprefix
+.global _start
+_start:
+    lea rdi, [rsp + 24]
+    mov rdx, 0
+    count_loop: // Code to calculate size of flag and store it in rdx
+        cmp BYTE PTR [rdi + rdx], 0x0
+        je write_data
+        inc rdx
+        jmp count_loop
+    write_data:
+        mov rdi, 1
+        lea rsi, [rsp + 24]
+        mov rax, 1
+        syscall
+    mov rdi, 42
+    mov rax, 60
+    syscall
+```
+This DOES NOT GET ACCEPTED!!
+It says it accepts 8 instructions. I find it a bit dumb, but whatever.
+```
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, 1
+    mov rsi, [rsp + 24]
+    mov rdx, 128
+    mov rax, 1
+    syscall
+    mov rdi, 42
+    mov rax, 60
+    syscall
+
+```
+So apparently I don't need to calculate the exact size of the string and put it in rdx?
+I will add this sequense for future referencing
+Read/Write Data
+```
+# read up to 128 bytes  
+xor eax, eax  
+xor edi, edi  
+lea rsi, [rsp]  
+mov edx, 128  
+syscall  
+
+
+# write exactly the number of bytes that read returned  
+
+mov rdx, rax  
+mov eax, 1  
+mov edi, 1  
+syscall
+```
+
+##### Aligning the Stack Through the Environment
+env -i FOO=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX /challenge/program
+Minus 1 X for the null byte!
+
+The Stack grows backwards.
+"But where do the actual addresses (`rsp`, or the actual address that `rsp+200` resolves to, etc.) come from?
+
+When your program is launched, the kernel **fills the stack backwards** from some chosen starting address. From there, it lays down the env strings ("growing" toward smaller addresses), then the arg strings, other metadata, then the `envp[]` and `argv[]` pointer tables, and finally `argc` on the leftmost side of the structure. That's where `rsp` ends up pointing.
+
+This has an interesting consequence: **the more bytes you stuff into the environment (or the program arguments), the further "left" the stack the kernel pushes everything else**. An extra env byte means `rsp` ends up at a smaller address, the arg-strings region sits one byte further "left", and `argv[0]` (a pointer into that region) holds a one-byte-smaller value."
+
+##### Aligning the Stack Through GDB
+"A common stack-related snafu is the shift in stack addresses that happens when launching a program under gdb. By default, gdb passes its own environment (your shell's env, plus a few of gdb's own additions) to the debugged program, and these extra environment variables shift the stack to the left, so `argv[0]` ends up at a different address than it does when you run the program straight from your shell. This isn't so important right now, but it becomes a big bother later on when you're trying to figure out why your bit-precise exploit code works in gdb but not on a target running normally. In those cases, learning to "synchronize" the two environments is important.
+
+This challenge will teach you the basics: making the addresses outside of gdb line up better with the addresses inside gdb.
+
+1. Run `/challenge/program` under gdb (`gdb /challenge/program`, then `run`). The program records its own `argv[0]` as your target.
+2. Quit gdb. Run `/challenge/program` from your shell --- it'll tell you how far off your shell-context `argv[0]` is from the target.
+3. Use an environment variable to "pad" your shell environment until `argv[0]` lands at the gdb-captured target.
+4. Flag!"
+Target Address: 0x7fffffffed1d
+-
+env FOO=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXX /challenge/program
+
+##### Aligning the Stack Through GDB, Generalized
+"The challenge in the previous level inherited your interactive shell's environment both in and outside of gdb. In reality, the differences in environment are often more significant between your local setup and the target you're analyzing. The binary you're debugging from your shell and the same binary running as a service, a cron job, or a remote script would see completely different environments (different `HOME`, different `PATH`, a different _set_ of variables entirely).
+
+This level explores this concept a bit more. In this level, the `gdb` wrapper sets its own environment rather than inheriting it from your shell, and the challenge, when run directly forces you to do the same, requiring an environment with only a single variable. For example:
+
+```console
+hacker@dojo:~$ /challenge/program
+You're running me with 8 environment variables, but I need exactly 1! Clear the environment and set one variable, then rerun me!
+hacker@dojo:~$ /challenge/program
+```
+
+How do you clear the environment? You can do so with the `env` command, which we've used before to print out all exported environment variables in the [Linux Luminarium](https://pwn.college/linux-luminarium/variables). The `env` command can also be used as a _wrapper_ to carefully control the environment of a program. For example, you can clear the child program's environment completely using `env -i`:
+
+```console
+hacker@dojo:~$ env -i /challenge/program
+You're running me with 0 environment variables, but I need exactly 1! Clear the environment and set one variable, then rerun me!
+hacker@dojo:~$ /challenge/program
+```
+
+You can also set variables after clearing the environment:
+
+```console
+hacker@dojo:~$ env -i PWN=COLLEGE HACK=PLANET /challenge/program
+You're running me with 2 environment variables, but I need exactly 1! Clear the environment and set one variable, then rerun me!
+hacker@dojo:~$ /challenge/program
+```
+
+This allows you to have very finegrained control over your environment. In this challenge, you'll use this finegrained control to line up addresses in a slightly more realistic setting, but keep the capability in mind for other situations!"
+
+env -i FOO=IAMPADDINGIHAVEASTORYTOTELLYOUSOONCEUPONATIMETHEREWASACHILDNAMEDBOBANDHELIKEDTOPLAYINTHESANDBOBFOUNDACRABNAMEDBOBANDHEWASLIKEWOWANOTHERBOBTHARSMADSOBOBBITBOBBUTWHICHBOBBITTHEOTHERBOBTHATSAGREATQUESTIONANDIDONTHAVEANANSWERSORRYIHAVETOOBYEEEE
+
+DONE!!!!
