@@ -1337,6 +1337,3152 @@ hacker@dojo:~$ /challenge/program
 
 This allows you to have very finegrained control over your environment. In this challenge, you'll use this finegrained control to line up addresses in a slightly more realistic setting, but keep the capability in mind for other situations!"
 
-env -i FOO=IAMPADDINGIHAVEASTORYTOTELLYOUSOONCEUPONATIMETHEREWASACHILDNAMEDBOBANDHELIKEDTOPLAYINTHESANDBOBFOUNDACRABNAMEDBOBANDHEWASLIKEWOWANOTHERBOBTHARSMADSOBOBBITBOBBUTWHICHBOBBITTHEOTHERBOBTHATSAGREATQUESTIONANDIDONTHAVEANANSWERSORRYIHAVETOOBYEEEE
+env -i FOO=IAMPADDINGIHAVEASTORYTOTELLYOUSOONCEUPONATIMETHEREWASACHILDNAMEDBOBANDHELIKEDTOPLAYINTHESANDBOBFOUNDACRABNAMEDBOBANDHEWASLIKEWOWANOTHERBOBTHARSMADSOBOBBITBOBBUTWHICHBOBBITTHEOTHERBOBTHATSAGREATQUESTIONANDIDONTHAVEANANSWERSORRYIHAVETOGOBYEEE
 
 DONE!!!!
+
+## Numbers as Strings
+##### A Single Digit
+I need to create a function theat gets 0-9 in hex in rdi and returns the number as decimal in rax.
+OK?
+```
+.intel_syntax noprefix
+.global atoi_digit
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    sub rdx, 0x30
+    mov rax, rdx
+    ret
+```
+I got wrong the part which is replaced by movzx and byte ptr. I thought I could work with the whole register.
+
+##### Two Digits
+I spend maybe an hour+ on this. At least.
+
+```
+.intel_syntax noprefix
+.global atoi_digit
+.global atoi
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    sub rdx, 0x30
+    mov rax, rdx
+    ret
+atoi:
+    push rdi
+    call atoi_digit
+    pop rdi
+    mov rcx, rax
+    imul rcx, 10
+    inc rdi
+    push rcx
+    call atoi_digit
+    pop rcx
+    add rcx, rax
+    mov rax, rcx
+    ret
+
+```
+A chat I had with the LLM:
+
+I dont quite understand the rdi and rdi+1 part.
+
+so in the first call i am giving the atoi-digit a value to parse in rdi. But rdi hold 2 digits. how does it take the leftmost digit first and doesnt crash because i gave it two bytes instead of one?
+
+- 
+
+That’s the key idea: **`rdi` does not hold the digits themselves. It holds an address**.
+
+## What `rdi` really contains
+
+If the harness calls:
+
+```c
+atoi("42")
+```
+
+then memory looks like:
+
+```text
+address p:     '4'
+address p+1:   '2'
+address p+2:   '\0'
+```
+
+and `rdi = p`.
+
+So:
+
+- `rdi` points to `'4'`
+- `rdi + 1` points to `'2'`
+
+## Why `atoi_digit` only reads one digit
+
+Your code does:
+
+```asm
+movzx rdx, byte ptr [rdi]
+```
+
+That means:
+
+- go to the memory address in `rdi`
+- read **exactly 1 byte**
+
+So if `rdi = p`, it reads only `'4'`.
+
+It does **not** read the whole string.
+
+## Then why `rdi+1`?
+
+After `inc rdi`, now `rdi = p+1`, so:
+
+```asm
+movzx rdx, byte ptr [rdi]
+```
+
+reads only `'2'`.
+
+## Why no crash?
+
+Because both `p` and `p+1` are valid addresses in the string.
+
+You’d only crash if you pointed somewhere invalid.
+
+## Mental model
+
+Think of:
+
+- `rdi` = “where to start reading”
+- `byte ptr [rdi]` = “read one character from there”
+
+##### String to Integer
+```
+.intel_syntax noprefix
+.global atoi_digit
+.global atoi
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    sub rdx, 0x30
+    mov rax, rdx
+    ret
+atoi:
+    push rdi
+    call atoi_digit
+    pop rdi
+    loop:
+    mov rcx, rax
+    imul rcx, 10
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    push rcx
+    call atoi_digit
+    pop rcx
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    ret
+
+```
+I DONT KNOW HOW TO DEBUG WITH GDB AND THATS A PROBLEM!!
+25.8.26 19:21
+I am on my day off and I used an LLM to teach me to debug with gdb. I am pasting the output here for future references:
+###### How to Debug:
+Absolutely—and it’s not bad that you don’t know GDB yet. GDB feels confusing until you learn a small repeatable workflow. We’ll use the challenge’s _start exactly as intended and watch:
+
+the test string get placed on the stack,
+rdi point to it,
+call atoi enter your function,
+rdi move through each character,
+rax build the result,
+the bug appear when '\0' becomes -48.
+1. Create a debugging version
+
+Save this as debug.s:
+
+.intel_syntax noprefix
+
+.global _start
+.global atoi_digit
+.global atoi
+
+_start:
+    push 0x333231       # Stack bytes become: 31 32 33 00...
+                        # In ASCII: "123\0"
+
+    mov rdi, rsp        # rdi points to "123"
+    int3                # GDB will stop here
+
+    call atoi
+
+    mov rdi, rax        # Linux exit status = atoi result
+    mov rax, 60         # exit syscall
+    syscall
+
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    sub rdx, 0x30
+    mov rax, rdx
+    ret
+
+
+atoi:
+    call atoi_digit
+
+loop:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0
+    je null_byte
+
+    mov rcx, rax
+    imul rcx, 10
+
+    inc rdi
+
+    push rcx
+    call atoi_digit
+    pop rcx
+
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+
+null_byte:
+    ret
+
+
+I removed:
+
+push rdi
+call atoi_digit
+pop rdi
+
+
+because your atoi_digit does not change rdi. Therefore, saving it currently has no effect.
+
+We’re intentionally keeping the rest of your buggy code because the purpose is to catch the bug in GDB.
+
+2. Assemble and link it
+
+Run:
+
+as -g -o debug.o debug.s
+ld -o debug debug.o
+
+
+The -g adds debugging information.
+
+Check that the executable exists:
+
+ls -l debug
+
+
+You can run it normally:
+
+./debug
+echo $?
+
+
+Your code will not return 123 yet because it has the null-byte bug.
+
+3. Start GDB in TUI mode
+
+Use:
+
+gdb -tui ./debug
+
+
+At the GDB prompt, select Intel syntax:
+
+set disassembly-flavor intel
+
+
+This matters because your source uses Intel syntax. Otherwise, GDB may display instructions in AT&T syntax.
+
+If TUI isn’t visible, press:
+
+Ctrl-x a
+
+
+That means:
+
+hold Ctrl,
+press x,
+release them,
+press a.
+
+You can also enter:
+
+tui enable
+
+4. Choose a useful TUI layout
+
+Enter:
+
+layout regs
+
+
+This normally gives you:
+
+a register window,
+an assembly window,
+the GDB command window.
+
+If you want only assembly:
+
+layout asm
+
+
+Return to the register layout with:
+
+layout regs
+
+
+For this exercise, use:
+
+layout regs
+
+
+The most important registers are:
+
+rdi — pointer to the current character
+rax — return value/running total
+rdx — current character/current digit
+rcx — temporary running total
+rsp — top of the stack
+rip — address of the next instruction
+
+Changed registers are usually highlighted in the register window.
+
+5. Run until int3
+
+Enter:
+
+run
+
+
+Short form:
+
+r
+
+
+The program executes:
+
+push 0x333231
+mov rdi, rsp
+int3
+
+
+GDB should report something similar to:
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+
+
+This is expected. int3 deliberately generated the trap.
+
+The highlighted instruction will usually be the instruction after int3:
+
+call atoi
+
+
+That is because the processor already executed int3 before reporting the trap.
+
+6. Understand what _start created
+
+At this point:
+
+push 0x333231
+
+
+has put the number 0x333231 on the stack.
+
+Because x86-64 is little-endian, the bytes appear in memory in this order:
+
+31 32 33 00 00 00 00 00
+
+
+In ASCII:
+
+'1' '2' '3' '\0'
+
+
+And this instruction:
+
+mov rdi, rsp
+
+
+makes rdi point to the first byte.
+
+Inspect the string
+
+Enter:
+
+x/s $rdi
+
+
+You should see something similar to:
+
+0x7fffffffe...: "123"
+
+
+The command means:
+
+x — examine memory
+/s — show it as a null-terminated string
+$rdi — start at the address stored in rdi
+Inspect the first character
+x/c $rdi
+
+
+You should see:
+
+49 '1'
+
+
+Decimal 49 is hexadecimal 0x31, the ASCII code for '1'.
+
+Inspect the raw bytes
+x/8bx $rdi
+
+
+Meaning:
+
+8 — show eight units
+b — each unit is one byte
+x — print in hexadecimal
+
+You should see bytes resembling:
+
+0x31 0x32 0x33 0x00 0x00 0x00 0x00 0x00
+
+
+This proves that the string really exists in memory as:
+
+"123\0"
+
+7. Step into atoi
+
+The current instruction should be:
+
+call atoi
+
+
+Use:
+
+stepi
+
+
+Short form:
+
+si
+
+
+This executes one machine instruction. Because the instruction is call atoi, you should now be inside atoi.
+
+The highlighted instruction should be:
+
+call atoi_digit
+
+
+You can confirm the current location using:
+
+x/i $rip
+
+
+Or:
+
+disassemble atoi
+
+8. Understand what call did
+
+When this happens:
+
+call atoi
+
+
+the CPU effectively performs two actions:
+
+pushes the return address onto the stack,
+jumps to atoi.
+
+Inspect the stack:
+
+x/4gx $rsp
+
+
+The first eight-byte value is the return address. That is where ret from atoi will return.
+
+You don’t need to memorize the address. Just understand:
+
+call = save where to return + jump
+ret  = take saved address + jump back
+
+9. Step into atoi_digit
+
+You are now at:
+
+call atoi_digit
+
+
+Enter:
+
+si
+
+
+Now the highlighted instruction should be:
+
+movzx rdx, byte ptr [rdi]
+
+
+Before executing it, inspect the character:
+
+x/c $rdi
+
+
+It should show:
+
+49 '1'
+
+
+Now execute:
+
+si
+
+
+The instruction:
+
+movzx rdx, byte ptr [rdi]
+
+
+loads the byte '1', which is 0x31, into rdx.
+
+Inspect it:
+
+p/x $rdx
+
+
+Expected:
+
+$... = 0x31
+
+
+You can also print it in decimal:
+
+p/d $rdx
+
+
+Expected:
+
+49
+
+10. Watch ASCII become a number
+
+The current instruction should be:
+
+sub rdx, 0x30
+
+
+Why subtract 0x30?
+
+ASCII digits are represented as:
+
+'0' = 0x30
+'1' = 0x31
+'2' = 0x32
+'3' = 0x33
+
+
+So:
+
+'1' - '0'
+0x31 - 0x30
+= 1
+
+
+Execute the subtraction:
+
+si
+
+
+Now inspect rdx:
+
+p/d $rdx
+
+
+Expected:
+
+1
+
+
+Next instruction:
+
+mov rax, rdx
+
+
+Execute it:
+
+si
+
+
+Now:
+
+p/d $rax
+
+
+should show:
+
+1
+
+
+That means atoi_digit is returning the numeric value 1 in rax.
+
+11. Step over ret
+
+The current instruction should be:
+
+ret
+
+
+Execute:
+
+si
+
+
+You will return to atoi, at the instruction after:
+
+call atoi_digit
+
+
+At this point:
+
+rax = 1
+rdi still points to '1'
+
+
+Verify:
+
+p/d $rax
+x/c $rdi
+
+
+This is the first important state:
+
+running value = 1
+current character = '1'
+
+12. Step through the first loop iteration
+
+Your loop begins with:
+
+movzx rdx, byte ptr [rdi]
+cmp rdx, 0
+je null_byte
+
+
+Step through the load:
+
+si
+
+
+Now:
+
+p/x $rdx
+
+
+should show:
+
+0x31
+
+
+Execute the comparison:
+
+si
+
+
+A useful fact: cmp does not store a result. It updates the CPU flags.
+
+Check the Zero Flag:
+
+p $eflags
+
+
+Or inspect the full flags register:
+
+info registers eflags
+
+
+Because rdx is not zero, the Zero Flag is not set.
+
+Execute:
+
+si
+
+
+The instruction is:
+
+je null_byte
+
+
+Since the comparison was not equal, the jump is not taken.
+
+13. Watch the running total
+
+Continue with:
+
+mov rcx, rax
+imul rcx, 10
+
+
+Execute the move:
+
+si
+
+
+Now:
+
+p/d $rcx
+
+
+should show:
+
+1
+
+
+Execute the multiplication:
+
+si
+
+
+Now:
+
+p/d $rcx
+
+
+should show:
+
+10
+
+
+Your code has calculated:
+
+old result × 10
+1 × 10 = 10
+
+14. Watch rdi move through the string
+
+Before inc rdi, check:
+
+x/c $rdi
+
+
+It should show:
+
+'1'
+
+
+Execute:
+
+si
+
+
+This executes:
+
+inc rdi
+
+
+Now examine the current character:
+
+x/c $rdi
+
+
+It should show:
+
+48 '0'
+
+
+If your test string is "123", it should instead show:
+
+50 '2'
+
+
+For "123", the pointer movement is:
+
+Initially: rdi -> '1'
+After inc: rdi -> '2'
+After inc: rdi -> '3'
+After inc: rdi -> '\0'
+
+
+To see the remainder of the string:
+
+x/s $rdi
+
+
+After moving from '1' to '2', it should show:
+
+"23"
+
+
+That is an excellent way to understand what the pointer is doing.
+
+15. Understand push rcx
+
+Your next instructions are:
+
+push rcx
+call atoi_digit
+pop rcx
+
+
+Why save rcx?
+
+At this moment:
+
+rcx = 10
+
+
+You want to keep that value while calling atoi_digit.
+
+Execute:
+
+si
+
+
+That runs:
+
+push rcx
+
+
+Now inspect the top of the stack:
+
+x/gd $rsp
+
+
+You should see:
+
+10
+
+
+Then step into atoi_digit:
+
+si
+
+
+Follow it instruction by instruction again:
+
+si
+si
+si
+si
+
+
+The character '2' becomes numeric 2, and atoi_digit returns:
+
+rax = 2
+
+
+Back in atoi, execute:
+
+si
+
+
+for:
+
+pop rcx
+
+
+Now:
+
+p/d $rcx
+
+
+should show the saved value:
+
+10
+
+
+And:
+
+p/d $rax
+
+
+should show:
+
+2
+
+
+You now have:
+
+rcx = old result × 10 = 10
+rax = new digit          = 2
+
+16. Watch 10 + 2 become 12
+
+The next instruction is:
+
+add rcx, rax
+
+
+Execute:
+
+si
+
+
+Then:
+
+p/d $rcx
+
+
+Expected:
+
+12
+
+
+Next:
+
+mov rax, rcx
+
+
+Execute:
+
+si
+
+
+Now:
+
+p/d $rax
+
+
+Expected:
+
+12
+
+
+Your running result is now 12.
+
+Then:
+
+jmp loop
+
+
+Execute:
+
+si
+
+
+The highlighted instruction returns to the beginning of the loop.
+
+17. Continue until the result is 123
+
+Repeat the same process for '3'.
+
+The important states should be:
+
+After processing '1': rax = 1
+After processing '2': rax = 12
+After processing '3': rax = 123
+
+
+The formula is:
+
+result = result * 10 + digit
+
+
+For "123":
+
+0 × 10 + 1 = 1
+1 × 10 + 2 = 12
+12 × 10 + 3 = 123
+
+
+After processing the last '3', check:
+
+p/d $rax
+
+
+You should see:
+
+123
+
+
+But your function does not return yet. This is where you should become suspicious:
+
+“The answer is already correct. What instruction happens next?”
+
+Continue slowly.
+
+18. Catch the bug
+
+At the beginning of the next loop iteration, rdi still points to '3'.
+
+Check:
+
+x/c $rdi
+
+
+You will see:
+
+51 '3'
+
+
+So this check:
+
+movzx rdx, byte ptr [rdi]
+cmp rdx, 0
+je null_byte
+
+
+does not exit because rdi still points at '3', not at the byte after '3'.
+
+Your code then does:
+
+mov rcx, rax
+imul rcx, 10
+
+
+Now:
+
+rcx = 1230
+
+
+Execute:
+
+inc rdi
+
+
+Then inspect:
+
+x/c $rdi
+
+
+You should now see:
+
+0 '\000'
+
+
+This is the most important moment.
+
+rdi now points to the null byte, but your program has already passed its null-byte check.
+
+The next instructions call atoi_digit:
+
+push rcx
+call atoi_digit
+
+
+Step into it.
+
+At:
+
+movzx rdx, byte ptr [rdi]
+
+
+execute the instruction and inspect:
+
+p/d $rdx
+
+
+You should see:
+
+0
+
+
+That is correct: the current byte is '\0'.
+
+But your next instruction is:
+
+sub rdx, 0x30
+
+
+Execute it:
+
+si
+
+
+Now show rdx as a signed decimal number:
+
+p/d $rdx
+
+
+You may see the unsigned interpretation because rdx is a 64-bit register. To force signed output:
+
+p/d (long)$rdx
+
+
+Expected:
+
+-48
+
+
+You have now caught the bug:
+
+'\0' - '0'
+= 0 - 48
+= -48
+
+
+Your code incorrectly converted the null terminator into the “digit” -48.
+
+19. Watch the incorrect answer form
+
+After returning from atoi_digit, your values are approximately:
+
+rcx = 1230
+rax = -48
+
+
+Then the code performs:
+
+add rcx, rax
+
+
+Therefore:
+
+1230 + (-48) = 1182
+
+
+Execute it and check:
+
+p/d $rcx
+
+
+You should see:
+
+1182
+
+
+This explains your longer input too:
+
+2012437022 × 10 - 48
+= 20124370220 - 48
+= 20124370172
+
+
+That is exactly the incorrect result you observed.
+
+You did not have to guess. GDB showed you:
+
+rax reached the correct answer,
+the loop continued once too many times,
+rdi moved to '\0',
+atoi_digit converted '\0' into -48,
+-48 was added to the multiplied result.
+
+That is real debugging.
+
+20. Fix the location of the check
+
+The current structure checks [rdi] before incrementing rdi, but it calls atoi_digit after incrementing it.
+
+The check therefore needs to happen after inc rdi and before the call:
+
+atoi:
+    call atoi_digit
+
+loop:
+    mov rcx, rax
+    imul rcx, 10
+
+    inc rdi
+
+    cmp byte ptr [rdi], 0
+    je done
+
+    push rcx
+    call atoi_digit
+    pop rcx
+
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+
+done:
+    ret
+
+
+However, this version has another subtle problem: when it sees '\0', rax contains the old result, which is good, but rcx contains the multiplied value that should not be returned. Since rax was not replaced by rcx yet, returning rax works.
+
+A much simpler version is:
+
+atoi:
+    xor eax, eax
+
+loop:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0
+    je done
+
+    sub rdx, 0x30
+
+    imul rax, rax, 10
+    add rax, rdx
+
+    inc rdi
+    jmp loop
+
+done:
+    ret
+
+
+This directly implements:
+
+while current byte is not zero:
+    digit = current byte - '0'
+    result = result * 10 + digit
+    move to next byte
+
+
+For learning purposes, debug both versions and watch the simpler one produce:
+
+rax: 0 → 1 → 12 → 123
+rdi: '1' → '2' → '3' → '\0'
+
+21. Restart after changing the program
+
+Quit GDB:
+
+quit
+
+
+Reassemble and relink:
+
+as -g -o debug.o debug.s
+ld -o debug debug.o
+
+
+Start GDB again:
+
+gdb -tui ./debug
+
+
+Then:
+
+set disassembly-flavor intel
+layout regs
+run
+
+
+You can also rebuild while GDB remains open in another terminal, then use:
+
+file ./debug
+run
+
+
+But while learning, restarting GDB is simpler.
+
+22. Useful TUI controls
+Refresh a broken screen
+
+Sometimes command output damages the TUI display. Press:
+
+Ctrl-l
+
+
+That redraws the screen.
+
+Enable or disable TUI
+Ctrl-x a
+
+Change active TUI window
+Ctrl-x o
+
+
+This is useful if you want to scroll the assembly or register window.
+
+Scroll an active TUI window
+
+Use:
+
+Page Up
+Page Down
+
+
+If typing commands starts moving or scrolling a window unexpectedly, press:
+
+Ctrl-x o
+
+
+until the command window is active again.
+
+23. Important GDB commands to memorize
+
+You don’t need to learn all of GDB. Start with these:
+
+run
+
+
+Start the program.
+
+stepi
+
+
+Execute one machine instruction, entering calls.
+
+nexti
+
+
+Execute one machine instruction, but treat a function call as one step.
+
+layout regs
+
+
+Show registers and assembly.
+
+x/i $rip
+
+
+Show the current instruction.
+
+x/c $rdi
+
+
+Show the character pointed to by rdi.
+
+x/s $rdi
+
+
+Show the string beginning at rdi.
+
+x/8bx $rdi
+
+
+Show eight raw bytes beginning at rdi.
+
+p/d $rax
+
+
+Print rax in decimal.
+
+p/x $rax
+
+
+Print rax in hexadecimal.
+
+p/d (long)$rdx
+
+
+Print rdx as a signed 64-bit value.
+
+info registers
+
+
+Show all general-purpose registers.
+
+disassemble atoi
+
+
+Show atoi’s instructions.
+
+24. stepi versus nexti
+
+Suppose the current instruction is:
+
+call atoi_digit
+
+
+If you enter:
+
+stepi
+
+
+GDB enters atoi_digit, allowing you to inspect every instruction.
+
+If you enter:
+
+nexti
+
+
+GDB runs the entire call and stops at the next instruction in atoi.
+
+Use:
+
+stepi when debugging inside atoi_digit,
+nexti once you trust atoi_digit and only want to debug atoi.
+
+Short forms:
+
+si
+ni
+
+25. One warning about echo $?
+
+Linux terminal exit statuses contain only the low eight bits, so their normal visible range is:
+
+0–255
+
+
+For "123":
+
+./debug
+echo $?
+
+
+shows:
+
+123
+
+
+But for "1000", the shell will not show 1000. It will show:
+
+1000 modulo 256 = 232
+
+
+That does not necessarily mean atoi returned the wrong value.
+
+For large results, inspect rax in GDB just before:
+
+mov rdi, rax
+
+
+For example, break after atoi returns:
+
+break *_start+7
+
+
+Exact offsets can vary, so a safer method is to place another int3:
+
+call atoi
+int3
+
+mov rdi, rax
+mov rax, 60
+syscall
+
+
+Then run and inspect:
+
+p/d $rax
+
+
+That will show the full 64-bit result.
+
+Your debugging mindset
+
+Every loop iteration, ask only these four questions:
+
+What character does rdi point to?
+
+x/c $rdi
+
+
+What is the running total?
+
+p/d $rax
+
+
+What digit did I just convert?
+
+p/d $rdx
+
+
+Which instruction changes the value incorrectly?
+
+stepi
+
+
+The aim is not initially to understand the whole function at once. The aim is to locate the first moment when reality differs from your expectation.
+
+In this program, that moment is:
+
+Expected: detect '\0' and return 123
+Actual:   subtract 0x30 from '\0', producing -48
+
+
+Once you identify the first wrong state, the cause is usually only one or two instructions above it.
+
+##### Negative Numbers
+```
+.intel_syntax noprefix
+.global atoi_digit
+.global atoi
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, 0x30
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    call atoi_digit
+    loop:
+    mov rcx, rax
+    imul rcx, 10
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    push rcx
+    call atoi_digit
+    pop rcx
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+```
+
+##### Where the Number Ends
+```
+.intel_syntax noprefix
+.global atoi_digit
+.global atoi
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+```
+Debugged completely by myself. I know the code isn't the cleanest...
+
+##### A Whole Program
+Should be simple.
+```
+.intel_syntax noprefix
+.global _start
+.global atoi_digit
+.global atoi
+
+_start:
+    mov rdi, [rsp+16]
+    call atoi
+    mov rdi, rax
+    mov rax, 60
+    syscall
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+```
+
+##### A Single Digit, Back to Text
+```
+.intel_syntax noprefix
+.global itoa_digit
+itoa_digit:
+    mov rdx, rdi
+    add rdx, 0x30
+    mov rax, rdx
+    ret
+
+```
+
+##### Divide and Reminder
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+itoa_digit:
+    mov rdx, rdi
+    add rdx, 0x30
+    mov rax, rdx
+    ret
+
+itoa:
+    mov rax, rdi
+    xor rdx, rdx
+    mov rcx, 10
+    div rcx
+    mov rdi, rax
+    push rdx
+    push rsi
+    call itoa_digit
+    pop rsi
+    pop rdx
+    mov rdi, rdx
+    push rax
+    push rsi
+    call itoa_digit
+    pop rsi
+    mov rdx, rax
+    pop rax
+    mov [rsi], al
+    mov [rsi+1], dl
+    mov rax, 2
+    ret
+
+```
+I debugged this for like 10 minutes without realising i was rebuilding debug and not DAR.so
+Other than that I was writing to output instead of just writing to the buffer. Debugged by myself.
+
+##### Drop the Leading Zero
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+itoa_digit:
+    mov rdx, rdi
+    add rdx, 0x30
+    mov rax, rdx
+    ret
+
+itoa:
+    mov rax, rdi
+    xor rdx, rdx
+    mov rcx, 10
+    div rcx
+    cmp rax, 0
+    je zero
+    mov rdi, rax
+    push rdx
+    push rsi
+    call itoa_digit
+    pop rsi
+    pop rdx
+    mov rdi, rdx
+    push rax
+    push rsi
+    call itoa_digit
+    pop rsi
+    mov rdx, rax
+    pop rax
+    mov [rsi], al
+    mov [rsi+1], dl
+    mov rax, 2
+    ret
+     zero:
+        mov rdi, rdx
+        call itoa_digit
+        mov [rsi], al
+        mov rax, 1
+        ret
+
+```
+
+Pretty ok. I just got to fix the ret 1 or 2 and do loops instead.
+
+##### Integer to String
+
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+
+itoa_digit:
+    mov rdx, rdi
+    add rdx, 0x30
+    mov rax, rdx
+    ret
+
+itoa:
+    mov r9, 0
+    mov r10, 0
+    mov rax, rdi
+    xor rdx, rdx
+    mov rcx, 10
+    div rcx
+    cmp rax, 0
+    je zero
+    peel_digits:
+        inc r9
+        push rdx
+        cmp rax, 0
+        je done_peel
+        xor rdx, rdx
+        mov rcx, 10
+        div rcx
+        jmp peel_digits
+    done_peel:
+        cmp r10, r9
+        je done
+        pop rdi
+        call itoa_digit
+        mov [rsi+r10], al
+        inc r10
+        jmp done_peel
+    done:
+        mov rax, r9
+        ret
+    zero:
+        or  rax, rdx
+        jz  both_zero
+        mov rdi, rdx
+        call itoa_digit
+        mov [rsi], al
+        mov rax, 1
+        ret
+    both_zero:
+        mov rdi, rdx
+        call itoa_digit
+        mov [rsi], al
+        mov rax, 1
+        ret
+
+```
+
+##### Negative Numbers, Back to Text
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor edx, edx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done:
+    mov rax, r8
+    ret
+    
+```
+
+##### Sum Them All
+This seems ok?
+Actually, no.
+I need to load the value from argv\[1] to argv\[argc-1].
+I need to know how long is each number, until a null byte.
+Then, load each number to "atoi", and store the sum in a register.
+In the end, I need to turn it back to ascii with itoa and write() it.
+
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+.section .bss
+buf: .skip 32
+
+.section .text
+
+_start:
+    xor r11, r11
+    mov rbx, [rsp]
+    lea r12, [rsp + 16]
+
+.loop:
+    cmp rbx, 1
+    jle .done
+
+    mov rdi, [r12]
+    call atoi
+
+    add r11, rax
+    add r12, 8
+    dec rbx
+    jmp .loop
+
+.done:
+    mov rdi, r11
+    lea rsi, [rip + buf]
+    call itoa
+
+    mov rdx, rax
+    lea rsi, [rip + buf]
+
+    mov rax, 1
+    mov rdi, 1
+    syscall
+
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov byte ptr [rsi], 0
+    mov rax, r8
+    ret
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+
+```
+I dont want to talk about it. I understand the logic, but I coulnd't write it by myself. Yes, I AM DUMB!
+
+##### Addition
+So from what I understand, this doesnt support multiple operators. X+Y and thats it.
+In this case, it's more simple.
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+
+_start:
+    mov rcx, 0
+    mov rdi, [rsp+24]
+    cmp BYTE PTR [rdi], '+'
+    jnz unknown_operator
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+    unknown_operator:
+        mov rdi, 1
+        mov rax, 60
+        syscall
+
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov byte ptr [rsi], 0
+    mov rax, r8
+    ret
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+```
+
+##### Subtraction
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+
+_start:
+    mov rcx, 0
+    mov rdi, [rsp+24]
+    cmp BYTE PTR [rdi], '+'
+    je addition
+    cmp BYTE PTR [rdi], '-'
+    je subtraction
+    jnz unknown_operator
+    addition:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+    subtraction:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    sub rcx, rax    # subtraction!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+    unknown_operator:
+        mov rdi, 1
+        mov rax, 60
+        syscall
+
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov byte ptr [rsi], 0
+    mov rax, r8
+    ret
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+
+```
+
+##### Multiplication
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+
+_start:
+    mov rcx, 0
+    mov rdi, [rsp+24]
+    cmp BYTE PTR [rdi], '+'
+    je addition
+    cmp BYTE PTR [rdi], '-'
+    je subtraction
+    cmp BYTE PTR [rdi], '*'
+    je multiplication
+    jnz unknown_operator
+
+    addition:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    subtraction:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    sub rcx, rax    # subtraction!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    multiplication:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    imul rcx, rax    # multiplication!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    unknown_operator:
+        mov rdi, 1
+        mov rax, 60
+        syscall
+
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov byte ptr [rsi], 0
+    mov rax, r8
+    ret
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+```
+
+##### Bitwise Operators
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+
+_start:
+    mov rcx, 0
+    mov rdi, [rsp+24]
+
+    cmp BYTE PTR [rdi], '+'
+    je .addition
+    cmp BYTE PTR [rdi], '-'
+    je .subtraction
+    cmp BYTE PTR [rdi], '*'
+    je .multiplication
+    cmp BYTE PTR [rdi], '^'
+    je .xor
+    cmp BYTE PTR [rdi], '|'
+    je .or
+    cmp BYTE PTR [rdi], '&'
+    je .and
+
+    jnz .unknown_operator
+
+    .addition:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .subtraction:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    sub rcx, rax    # subtraction!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .multiplication:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    imul rcx, rax    # multiplication!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .xor:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    xor rcx, rax    # xor!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .or:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    or rcx, rax    # or!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .and:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    and rcx, rax    # and!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall     
+
+    .unknown_operator:
+        mov rdi, 1
+        mov rax, 60
+        syscall
+
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov byte ptr [rsi], 0
+    mov rax, r8
+    ret
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+```
+
+##### Unary Operators
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+
+_start:
+    mov rcx, 0
+    mov rdx, [rsp]
+    cmp rdx, 4
+    je binary_dispatch
+    cmp rdx, 3
+    je unary_dispatch
+    binary_dispatch:
+    mov rdi, [rsp+24]
+
+    cmp BYTE PTR [rdi], '+'
+    je .addition
+    cmp BYTE PTR [rdi], '-'
+    je .subtraction
+    cmp BYTE PTR [rdi], '*'
+    je .multiplication
+    cmp BYTE PTR [rdi], '^'
+    je .xor
+    cmp BYTE PTR [rdi], '|'
+    je .or
+    cmp BYTE PTR [rdi], '&'
+    je .and
+
+    jnz .unknown_operator
+
+    .addition:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .subtraction:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    sub rcx, rax    # subtraction!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .multiplication:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    imul rcx, rax    # multiplication!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .xor:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    xor rcx, rax    # xor!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .or:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    or rcx, rax    # or!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .and:
+    mov rdi, [rsp+16]
+    push rcx
+    call atoi
+    pop rcx
+    add rcx, rax
+    mov rdi, [rsp+32]
+    push rcx
+    call atoi
+    pop rcx
+    and rcx, rax    # and!
+    mov rdi, rcx
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    unary_dispatch:
+    mov rdi, [rsp+16]
+    cmp BYTE PTR [rdi], '-'
+    je .negates
+    cmp BYTE PTR [rdi], '~'
+    je .not
+
+    jnz .unknown_operator
+    
+    
+    .negates:
+    mov rdi, [rsp+24]
+    call atoi
+    neg rax    # negates!
+    mov rdi, rax
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+    .not:
+    mov rdi, [rsp+24]
+    call atoi
+    not rax    # negates!
+    mov rdi, rax
+    sub rsp, 0x20
+    mov rsi, rsp
+    call itoa
+    mov rdx, rax
+    mov rsi, rsp
+    mov byte ptr [rsi + rdx], 10    # '\n'
+    inc rdx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+
+    .unknown_operator:
+        mov rdi, 1
+        mov rax, 60
+        syscall
+
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov byte ptr [rsi], 0
+    mov rax, r8
+    ret
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+```
+
+DONE CALC!
