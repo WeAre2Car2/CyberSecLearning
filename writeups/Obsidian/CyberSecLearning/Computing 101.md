@@ -4486,3 +4486,1683 @@ neg_rax:
 ```
 
 DONE CALC!
+
+PRINTF
+4.9.26 16:49
+
+##### Literal Output
+```
+.intel_syntax noprefix
+.global _start
+
+_start:
+    mov rdx, 0
+    mov rdi, [rsp+16]
+    count_loop: // Code to calculate size of flag and store it in rdx
+        cmp BYTE PTR [rdi + rdx], 0
+        je write_data
+        inc rdx
+        jmp count_loop
+    write_data:
+        mov rdi, 1
+        mov rsi, [rsp+16]
+        mov rax, 1
+        syscall
+        mov rdi, 0
+        mov rax, 60
+        syscall
+```
+
+ALSO:
+mov - when the data is given by a pointer
+lea - when there is actual data at that address. for the write_data part.
+
+##### Newline Escapes
+```
+.intel_syntax noprefix
+.global _start
+
+_start:
+    mov rdi, [rsp+16]
+
+    sub rsp, 0x100
+    mov rsi, rsp
+
+    xor rdx, rdx            # input index
+    xor rcx, rcx            # output index
+
+filter_loop:
+    cmp BYTE PTR [rdi + rdx], 0
+    je write_data
+
+    cmp BYTE PTR [rdi + rdx], 0x5c     # '\'
+    je slash
+
+    # normal character
+    mov al, BYTE PTR [rdi + rdx]
+    mov BYTE PTR [rsi + rcx], al
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+slash:
+    inc rdx
+    cmp BYTE PTR [rdi + rdx], 'n'
+    je new_line
+
+    # regular backslash
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rcx
+    jmp filter_loop
+
+new_line:
+    mov BYTE PTR [rsi + rcx], 0x0a
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+write_data:
+    mov rdx, rcx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+
+    mov rdi, 0
+    mov rax, 60
+    syscall
+```
+
+I definantly used an AI to complete this level. I wanted to copy rdi to rax byte by byte, but to filter out the \n and replace with 0x0a. I couldn't figure out a way to do it by myself, so I used AI for the syntax.
+
+##### Escaped Syntax
+In this challenge, we need to filter two \ to one and the same with %
+```
+.intel_syntax noprefix
+.global _start
+
+_start:
+    mov rdi, [rsp+16]
+
+    sub rsp, 0x100
+    mov rsi, rsp
+
+    xor rdx, rdx            # input index
+    xor rcx, rcx            # output index
+
+filter_loop:
+    cmp BYTE PTR [rdi + rdx], 0
+    je write_data
+
+    cmp BYTE PTR [rdi + rdx], 0x5c     # '\'
+    je slash
+    cmp BYTE PTR [rdi + rdx], 0x25     # '%'
+    je percent
+
+    # normal character
+    mov al, BYTE PTR [rdi + rdx]
+    mov BYTE PTR [rsi + rcx], al
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+slash:
+    inc rdx
+    cmp BYTE PTR [rdi + rdx], 'n'
+    je new_line
+    cmp BYTE PTR [rdi + rdx], 0x5c
+    je double_slash
+
+    # regular backslash
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rcx
+    jmp filter_loop
+
+percent:
+    inc rdx
+    cmp BYTE PTR [rdi + rdx], '%'
+    je double_percent
+
+    # regular percent
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rcx
+    jmp filter_loop
+
+new_line:
+    mov BYTE PTR [rsi + rcx], 0x0a
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+double_slash:
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rdx
+    inc rcx
+    jmp filter_loop
+    
+double_percent:
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+write_data:
+    mov rdx, rcx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+```
+
+##### Decimal Markers
+I need to build a feature so the if the scanner reads %d, it will scan the next argv and put it there. like:
+argv1: "value=%d"
+argv2: "-42"
+
+It says to use the atoi and itoa I made.
+
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+_start:
+    mov r14, rsp           # original rsp
+
+    mov rdi, [r14+16]      # argv[1]
+    sub rsp, 0x100
+    mov rsi, rsp            # output buffer
+
+    xor rdx, rdx            # input index
+    xor rcx, rcx            # output index
+
+filter_loop:
+    cmp BYTE PTR [rdi + rdx], 0
+    je write_data
+
+    cmp BYTE PTR [rdi + rdx], 0x5c     # '\'
+    je slash
+    cmp BYTE PTR [rdi + rdx], 0x25     # '%'
+    je percent
+
+    # normal character
+    mov al, BYTE PTR [rdi + rdx]
+    mov BYTE PTR [rsi + rcx], al
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+slash:
+    inc rdx
+    cmp BYTE PTR [rdi + rdx], 'n'
+    je new_line
+    cmp BYTE PTR [rdi + rdx], 0x5c
+    je double_slash
+
+    # regular backslash
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rcx
+    jmp filter_loop
+
+percent:
+    inc rdx
+    cmp BYTE PTR [rdi + rdx], '%'
+    je double_percent
+    cmp BYTE PTR [rdi + rdx], 'd'
+    je decimal_marker
+
+    # regular percent
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rcx
+    jmp filter_loop
+
+new_line:
+    mov BYTE PTR [rsi + rcx], 0x0a
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+double_slash:
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rdx
+    inc rcx
+    jmp filter_loop
+    
+double_percent:
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+decimal_marker:
+    push rdi
+    push rdx
+    push rcx
+    push rsi
+
+    mov rdi, [r14+24]       # argv[2]
+    call atoi
+
+    mov rdi, rax
+
+    mov rcx, [rsp+8]        # restore output index
+    mov rsi, [rsp]          # restore output buffer
+    add rsi, rcx
+
+    call itoa               # rax = number of bytes written
+    mov r8, rax             # save length
+
+    pop rsi
+    pop rcx
+    pop rdx
+    pop rdi
+
+    add rcx, r8             # advance output index
+    inc rdx                 # skip the 'd'
+    jmp filter_loop
+
+write_data:
+    mov rdx, rcx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov byte ptr [rsi], 0
+    mov rax, r8
+    ret
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+```
+
+##### Multiple Decimal Markers
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+_start:
+    mov r14, rsp           # original rsp
+
+    mov rdi, [r14+16]      # argv[1]
+    sub rsp, 0x100
+    mov rsi, rsp            # output buffer
+    mov r15, 24
+
+    xor rdx, rdx            # input index
+    xor rcx, rcx            # output index
+
+filter_loop:
+    cmp BYTE PTR [rdi + rdx], 0
+    je write_data
+
+    cmp BYTE PTR [rdi + rdx], 0x5c     # '\'
+    je slash
+    cmp BYTE PTR [rdi + rdx], 0x25     # '%'
+    je percent
+
+    # normal character
+    mov al, BYTE PTR [rdi + rdx]
+    mov BYTE PTR [rsi + rcx], al
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+slash:
+    inc rdx
+    cmp BYTE PTR [rdi + rdx], 'n'
+    je new_line
+    cmp BYTE PTR [rdi + rdx], 0x5c
+    je double_slash
+
+    # regular backslash
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rcx
+    jmp filter_loop
+
+percent:
+    inc rdx
+    cmp BYTE PTR [rdi + rdx], '%'
+    je double_percent
+    cmp BYTE PTR [rdi + rdx], 'd'
+    je decimal_marker
+
+    # regular percent
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rcx
+    jmp filter_loop
+
+new_line:
+    mov BYTE PTR [rsi + rcx], 0x0a
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+double_slash:
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rdx
+    inc rcx
+    jmp filter_loop
+    
+double_percent:
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+decimal_marker:
+    push rdi
+    push rdx
+    push rcx
+    push rsi
+
+    mov rdi, [r14+r15]      # current %d argument
+    add r15, 8              # advance to next argument
+
+    call atoi
+
+    mov rdi, rax
+
+    mov rcx, [rsp+8]        # output index
+    mov rsi, [rsp]          # output buffer
+    add rsi, rcx
+
+    call itoa
+    mov r8, rax             # length
+
+    pop rsi
+    pop rcx
+    pop rdx
+    pop rdi
+
+    add rcx, r8             # output index += converted length
+    inc rdx                  # skip 'd'
+    jmp filter_loop
+
+write_data:
+    mov rdx, rcx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov byte ptr [rsi], 0
+    mov rax, r8
+    ret
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+
+```
+
+##### String Markers
+```
+.intel_syntax noprefix
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+_start:
+    mov r14, rsp           # original rsp
+
+    mov rdi, [r14+16]      # argv[1]
+    sub rsp, 0x100
+    mov rsi, rsp            # output buffer
+    mov r15, 24
+
+    xor rdx, rdx            # input index
+    xor rcx, rcx            # output index
+
+filter_loop:
+    cmp BYTE PTR [rdi + rdx], 0
+    je write_data
+
+    cmp BYTE PTR [rdi + rdx], 0x5c     # '\'
+    je slash
+    cmp BYTE PTR [rdi + rdx], 0x25     # '%'
+    je percent
+
+    # normal character
+    mov al, BYTE PTR [rdi + rdx]
+    mov BYTE PTR [rsi + rcx], al
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+slash:
+    inc rdx
+    cmp BYTE PTR [rdi + rdx], 'n'
+    je new_line
+    cmp BYTE PTR [rdi + rdx], 0x5c
+    je double_slash
+
+    # regular backslash
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rcx
+    jmp filter_loop
+
+percent:
+    inc rdx
+    cmp BYTE PTR [rdi + rdx], '%'
+    je double_percent
+    cmp BYTE PTR [rdi + rdx], 'd'
+    je decimal_marker
+
+    # regular percent
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rcx
+    jmp filter_loop
+
+new_line:
+    mov BYTE PTR [rsi + rcx], 0x0a
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+double_slash:
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rdx
+    inc rcx
+    jmp filter_loop
+    
+double_percent:
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+decimal_marker:
+    push rdi
+    push rdx
+    push rcx
+    push rsi
+
+    mov rdi, [r14+r15]      # current %d argument
+    add r15, 8              # advance to next argument
+
+    call atoi
+
+    mov rdi, rax
+
+    mov rcx, [rsp+8]        # output index
+    mov rsi, [rsp]          # output buffer
+    add rsi, rcx
+
+    call itoa
+    mov r8, rax             # length
+
+    pop rsi
+    pop rcx
+    pop rdx
+    pop rdi
+
+    add rcx, r8             # output index += converted length
+    inc rdx                  # skip 'd'
+    jmp filter_loop
+
+string_marker:
+    mov r8, [r14+r15]       # r8 = pointer to string argument
+    add r15, 8              # consume this argv
+
+.copy_string:
+    cmp BYTE PTR [r8], 0
+    je .string_done
+
+    mov al, BYTE PTR [r8]
+    mov BYTE PTR [rsi+rcx], al
+
+    inc r8
+    inc rcx
+    jmp .copy_string
+
+.string_done:
+    inc rdx                 # skip 's'
+    jmp filter_loop
+
+write_data:
+    mov rdx, rcx
+    mov rdi, 1
+    mov rax, 1
+    syscall
+
+    mov rdi, 0
+    mov rax, 60
+    syscall
+
+
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+itoa:
+    mov rax, rdi
+    xor r8, r8
+    xor r9, r9
+
+    test rax, rax
+    jns .magnitude_ready
+
+.is_negative:
+    mov byte ptr [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+    mov byte ptr [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov byte ptr [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov byte ptr [rsi], 0
+    mov rax, r8
+    ret
+
+atoi_digit:
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x2d
+    je neg_num_check
+    sub rdx, '0'
+    mov rax, rdx
+    ret
+    neg_num_check:
+        inc rdi
+        mov r8, 1 # 1 if negative
+        movzx rdx, byte ptr [rdi]
+        sub rdx, 0x30
+        mov rax, rdx
+        ret
+atoi:
+    xor r8, r8
+    call atoi_digit
+    loop:
+    inc rdi
+    movzx rdx, byte ptr [rdi]
+    sub rdx, '0'
+    cmp rdx, 9
+    ja done
+    mov rcx, rax
+    imul rcx, 10
+    movzx rdx, byte ptr [rdi]
+    cmp rdx, 0x0
+    je null_byte
+    call atoi_digit
+    add rcx, rax
+    mov rax, rcx
+    jmp loop
+null_byte:
+    cmp r8, 1
+    je neg_rax
+    ret
+done:
+    cmp r8, 1
+    je neg_rax
+    ret
+neg_rax:
+    neg rax
+    ret
+
+
+```
+
+##### Hex Byte Escape
+Imma be honest, because the chances of someone else reading it is quite low, I am using AI for this now. Yes, I cannot do it by myself. I feel like its quite useless now. I know its bad. I just want to move on from this.
+
+```
+.intel_syntax noprefix
+
+.global itoa_digit
+.global itoa
+.global atoi_digit
+.global atoi
+.global _start
+
+
+_start:
+    mov r14, rsp                  # original rsp
+
+    mov rdi, [r14+16]             # argv[1] = format string
+
+    sub rsp, 0x100
+    mov rsi, rsp                  # output buffer
+
+    mov r15, 24                   # argv[2] = first extra argument
+
+    xor rdx, rdx                  # format index
+    xor rcx, rcx                  # output index
+
+
+filter_loop:
+    cmp BYTE PTR [rdi + rdx], 0
+    je write_data
+
+    cmp BYTE PTR [rdi + rdx], 0x5c        # '\'
+    je slash
+
+    cmp BYTE PTR [rdi + rdx], 0x25        # '%'
+    je percent
+
+    # normal character
+    mov al, BYTE PTR [rdi + rdx]
+    mov BYTE PTR [rsi + rcx], al
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+
+# --------------------------------------------------
+# '\' escapes
+# --------------------------------------------------
+
+slash:
+    inc rdx
+
+    cmp BYTE PTR [rdi + rdx], 'n'
+    je new_line
+
+    cmp BYTE PTR [rdi + rdx], 0x5c        # '\\'
+    je double_slash
+
+    cmp BYTE PTR [rdi + rdx], 'x'
+    je hex_escape
+
+    # Unknown escape: keep the '\'
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rcx
+    jmp filter_loop
+
+
+new_line:
+    mov BYTE PTR [rsi + rcx], 0x0a
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+
+double_slash:
+    mov BYTE PTR [rsi + rcx], 0x5c
+    inc rdx
+    inc rcx
+    jmp filter_loop
+
+
+# --------------------------------------------------
+# \xNN
+# --------------------------------------------------
+
+hex_escape:
+    # rdx points to 'x'
+    inc rdx                           # first hex digit
+
+    # -------------------------
+    # First hex digit
+    # -------------------------
+    movzx r8, BYTE PTR [rdi + rdx]
+
+    cmp r8, '0'
+    jb hex_first_upper
+    cmp r8, '9'
+    jbe hex_first_digit
+
+hex_first_upper:
+    cmp r8, 'A'
+    jb hex_first_lower
+    cmp r8, 'F'
+    jbe hex_first_uppercase
+
+hex_first_lower:
+    sub r8, 'a'
+    add r8, 10
+    jmp hex_first_done
+
+hex_first_uppercase:
+    sub r8, 'A'
+    add r8, 10
+    jmp hex_first_done
+
+hex_first_digit:
+    sub r8, '0'
+
+hex_first_done:
+    shl r8, 4                         # first nibble -> high 4 bits
+
+    # -------------------------
+    # Second hex digit
+    # -------------------------
+    inc rdx
+    movzx r9, BYTE PTR [rdi + rdx]
+
+    cmp r9, '0'
+    jb hex_second_upper
+    cmp r9, '9'
+    jbe hex_second_digit
+
+hex_second_upper:
+    cmp r9, 'A'
+    jb hex_second_lower
+    cmp r9, 'F'
+    jbe hex_second_uppercase
+
+hex_second_lower:
+    sub r9, 'a'
+    add r9, 10
+    jmp hex_second_done
+
+hex_second_uppercase:
+    sub r9, 'A'
+    add r9, 10
+    jmp hex_second_done
+
+hex_second_digit:
+    sub r9, '0'
+
+hex_second_done:
+    or r8, r9                         # combine the two nibbles
+
+    mov BYTE PTR [rsi + rcx], r8b
+    inc rcx
+
+    inc rdx                           # move past second hex digit
+    jmp filter_loop
+
+
+# --------------------------------------------------
+# '%' markers
+# --------------------------------------------------
+
+percent:
+    inc rdx                           # points after '%'
+
+    cmp BYTE PTR [rdi + rdx], '%'
+    je double_percent
+
+    cmp BYTE PTR [rdi + rdx], 'd'
+    je decimal_marker
+
+    cmp BYTE PTR [rdi + rdx], 's'
+    je string_marker
+
+    # Unknown marker: keep '%'
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rcx
+    jmp filter_loop
+
+
+double_percent:
+    mov BYTE PTR [rsi + rcx], 0x25
+    inc rdx                           # skip second '%'
+    inc rcx
+    jmp filter_loop
+
+
+# --------------------------------------------------
+# %d
+# --------------------------------------------------
+
+decimal_marker:
+    # Save current state
+    push rdi
+    push rdx
+    push rcx
+    push rsi
+
+    # Get next argv
+    mov rdi, [r14 + r15]
+    add r15, 8
+
+    call atoi                         # rax = integer
+
+    mov rdi, rax
+
+    # Restore output position
+    mov rcx, [rsp + 8]
+    mov rsi, [rsp]
+    add rsi, rcx
+
+    call itoa                         # rax = number of bytes written
+    mov r10, rax                      # save length
+
+    pop rsi
+    pop rcx
+    pop rdx
+    pop rdi
+
+    add rcx, r10                      # advance output index
+    inc rdx                           # skip 'd'
+    jmp filter_loop
+
+
+# --------------------------------------------------
+# %s
+# --------------------------------------------------
+
+string_marker:
+    mov r8, [r14 + r15]               # next argv string
+    add r15, 8                        # consume argument
+
+.copy_string:
+    cmp BYTE PTR [r8], 0
+    je .string_done
+
+    mov al, BYTE PTR [r8]
+    mov BYTE PTR [rsi + rcx], al
+
+    inc r8
+    inc rcx
+    jmp .copy_string
+
+.string_done:
+    inc rdx                           # skip 's'
+    jmp filter_loop
+
+
+# --------------------------------------------------
+# write output
+# --------------------------------------------------
+
+write_data:
+    mov rdx, rcx                      # output length
+    mov rdi, 1                        # stdout
+    mov rax, 1                        # write
+    syscall
+
+    xor rdi, rdi
+    mov rax, 60                       # exit
+    syscall
+
+
+# ==================================================
+# itoa
+# ==================================================
+
+itoa_digit:
+    mov rax, rdi
+    add rax, '0'
+    ret
+
+
+itoa:
+    mov rax, rdi
+    xor r8, r8                        # output length
+    xor r9, r9                        # digit count
+
+    test rax, rax
+    jns .magnitude_ready
+
+    mov BYTE PTR [rsi], '-'
+    inc rsi
+    inc r8
+    neg rax
+
+.magnitude_ready:
+    test rax, rax
+    jnz .peel_digits
+
+    mov BYTE PTR [rsi], '0'
+    inc r8
+    mov rax, r8
+    ret
+
+.peel_digits:
+    xor rdx, rdx
+    mov ecx, 10
+    div rcx
+
+    push rdx
+    inc r9
+
+    test rax, rax
+    jnz .peel_digits
+
+.write_digits:
+    pop rdi
+    call itoa_digit
+
+    mov BYTE PTR [rsi], al
+    inc rsi
+    inc r8
+
+    dec r9
+    jnz .write_digits
+
+.done_itoa:
+    mov BYTE PTR [rsi], 0
+    mov rax, r8
+    ret
+
+
+# ==================================================
+# atoi
+# ==================================================
+
+atoi_digit:
+    movzx rax, BYTE PTR [rdi]
+    sub rax, '0'
+    ret
+
+
+atoi:
+    xor rax, rax                     # result
+    xor r8, r8                       # negative flag
+
+    cmp BYTE PTR [rdi], '-'
+    jne .atoi_loop
+
+    mov r8, 1
+    inc rdi
+
+.atoi_loop:
+    movzx rcx, BYTE PTR [rdi]
+
+    cmp rcx, '0'
+    jb .atoi_done
+
+    cmp rcx, '9'
+    ja .atoi_done
+
+    sub rcx, '0'
+    imul rax, rax, 10
+    add rax, rcx
+
+    inc rdi
+    jmp .atoi_loop
+
+.atoi_done:
+    test r8, r8
+    jz .atoi_return
+
+    neg rax
+
+.atoi_return:
+    ret
+```
+
+## Debugging Refresher
+##### Setting Breakpoints
+```
+(gdb) run
+Starting program: /challenge/embryogdb_level4 
+Warning:
+Cannot insert breakpoint 3.
+Cannot access memory at address 0x5bd6dd122d4e
+
+(gdb) info break
+Num     Type           Disp Enb Address            What
+3       breakpoint     keep y   0x00005bd6dd122d4e 
+(gdb) delete 3
+(gdb) b *main+593
+Breakpoint 4 at 0x5f169907bd02
+(gdb) c
+Continuing.
+###
+### Welcome to /challenge/embryogdb_level4!
+###
+
+GDB is a very powerful dynamic analysis tool which you can use in order to understand the state of a program throughout
+its execution. You will become familiar with some of gdb's capabilities in this module.
+
+A critical part of dynamic analysis is getting your program to the state you are interested in analyzing. So far, these
+challenges have automatically set breakpoints for you to pause execution at states you may be interested in analyzing.
+It is important to be able to do this yourself.
+
+There are a number of ways to move forward in the program's execution. You can use the `stepi <n>` command, or `si <n>`
+for short, in order to step forward one instruction. You can use the `nexti <n>` command, or `ni <n>` for short, in
+order to step forward one instruction, while stepping over any function calls. The `<n>` parameter is optional, but
+allows you to perform multiple steps at once. You can use the `finish` command in order to finish the currently
+executing function. You can use the `break *<address>` parameterized command in order to set a breakpoint at the
+specified-address. You have already used the `continue` command, which will continue execution until the program hits a
+breakpoint.
+
+While stepping through a program, you may find it useful to have some values displayed to you at all times. There are
+multiple ways to do this. The simplest way is to use the `display/<n><u><f>` parameterized command, which follows
+exactly the same format as the `x/<n><u><f>` parameterized command. For example, `display/8i $rip` will always show you
+the next 8 instructions. On the other hand, `display/4gx $rsp` will always show you the first 4 values on the stack.
+Another option is to use the `layout regs` command. This will put gdb into its TUI mode and show you the contents of all
+of the registers, as well as nearby instructions.
+
+In order to solve this level, you must figure out a series of random values which will be placed on the stack. You are
+highly encouraged to try using combinations of `stepi`, `nexti`, `break`, `continue`, and `finish` to make sure you have
+a good internal understanding of these commands. The commands are all absolutely critical to navigating a program's
+execution.
+
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0x00005f169907bca4 in main ()
+(gdb) x/8gx $rbp-0x18
+0x7ffe09e99d58: 0x0000000000000000      0x0000000000000000
+0x7ffe09e99d68: 0xcea36c12e3337600      0x00007ffe09e99e10
+0x7ffe09e99d78: 0x00007a5f3111e1ca      0x0000000000000000
+0x7ffe09e99d88: 0x00007ffe09e99e98      0x0000000100000000
+(gdb) c
+Continuing.
+The random value has been set!
+
+Random value: 
+Breakpoint 4, 0x00005f169907bd02 in main ()
+(gdb) x/8gx $rbp-0x18
+0x7ffe09e99d58: 0x244e0ff0b2433f62      0x0000000000000000
+0x7ffe09e99d68: 0xcea36c12e3337600      0x00007ffe09e99e10
+0x7ffe09e99d78: 0x00007a5f3111e1ca      0x0000000000000000
+0x7ffe09e99d88: 0x00007ffe09e99e98      0x0000000100000000
+(gdb) c
+Continuing.
+
+c
+You input: c
+The correct answer is: 244e0ff0b2433f62
+[Inferior 1 (process 13020) exited with code 01]
+(gdb) kill
+The program is not being run.
+(gdb) run
+Starting program: /challenge/embryogdb_level4 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+###
+### Welcome to /challenge/embryogdb_level4!
+###
+
+GDB is a very powerful dynamic analysis tool which you can use in order to understand the state of a program throughout
+its execution. You will become familiar with some of gdb's capabilities in this module.
+
+A critical part of dynamic analysis is getting your program to the state you are interested in analyzing. So far, these
+challenges have automatically set breakpoints for you to pause execution at states you may be interested in analyzing.
+It is important to be able to do this yourself.
+
+There are a number of ways to move forward in the program's execution. You can use the `stepi <n>` command, or `si <n>`
+for short, in order to step forward one instruction. You can use the `nexti <n>` command, or `ni <n>` for short, in
+order to step forward one instruction, while stepping over any function calls. The `<n>` parameter is optional, but
+allows you to perform multiple steps at once. You can use the `finish` command in order to finish the currently
+executing function. You can use the `break *<address>` parameterized command in order to set a breakpoint at the
+specified-address. You have already used the `continue` command, which will continue execution until the program hits a
+breakpoint.
+
+While stepping through a program, you may find it useful to have some values displayed to you at all times. There are
+multiple ways to do this. The simplest way is to use the `display/<n><u><f>` parameterized command, which follows
+exactly the same format as the `x/<n><u><f>` parameterized command. For example, `display/8i $rip` will always show you
+the next 8 instructions. On the other hand, `display/4gx $rsp` will always show you the first 4 values on the stack.
+Another option is to use the `layout regs` command. This will put gdb into its TUI mode and show you the contents of all
+of the registers, as well as nearby instructions.
+
+In order to solve this level, you must figure out a series of random values which will be placed on the stack. You are
+highly encouraged to try using combinations of `stepi`, `nexti`, `break`, `continue`, and `finish` to make sure you have
+a good internal understanding of these commands. The commands are all absolutely critical to navigating a program's
+execution.
+
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0x00005df6d7e7bca4 in main ()
+(gdb) info break
+Num     Type           Disp Enb Address            What
+4       breakpoint     keep y   0x00005df6d7e7bd02 <main+593>
+(gdb) delete 4
+(gdb) b *main+593
+Breakpoint 5 at 0x5df6d7e7bd02
+(gdb) x/8gx $rbp-0x18
+0x7ffc43fad708: 0x0000000000000000      0x0000000000000000
+0x7ffc43fad718: 0xfcadd8da2bbd3500      0x00007ffc43fad7c0
+0x7ffc43fad728: 0x000079b60c48f1ca      0x0000000000000000
+0x7ffc43fad738: 0x00007ffc43fad848      0x0000000100000000
+(gdb) c
+Continuing.
+The random value has been set!
+
+Random value: 
+Breakpoint 5, 0x00005df6d7e7bd02 in main ()
+(gdb) x/8gx $rbp-0x18
+0x7ffc43fad708: 0x354455671d2552a5      0x0000000000000000
+0x7ffc43fad718: 0xfcadd8da2bbd3500      0x00007ffc43fad7c0
+0x7ffc43fad728: 0x000079b60c48f1ca      0x0000000000000000
+0x7ffc43fad738: 0x00007ffc43fad848      0x0000000100000000
+(gdb) c
+Continuing.
+0x354455671d2552a5
+You input: 354455671d2552a5
+The correct answer is: 354455671d2552a5
+The random value has been set!
+
+Random value: 
+Breakpoint 5, 0x00005df6d7e7bd02 in main ()
+(gdb) x/8gx $rbp-0x18
+0x7ffc43fad708: 0x61f01f2febd8ef2d      0x354455671d2552a5
+0x7ffc43fad718: 0xfcadd8da2bbd3500      0x00007ffc43fad7c0
+0x7ffc43fad728: 0x000079b60c48f1ca      0x0000000000000000
+0x7ffc43fad738: 0x00007ffc43fad848      0x0000000100000000
+(gdb) c
+Continuing.
+0x61f01f2febd8ef2d
+You input: 61f01f2febd8ef2d
+The correct answer is: 61f01f2febd8ef2d
+The random value has been set!
+
+Random value: 
+Breakpoint 5, 0x00005df6d7e7bd02 in main ()
+(gdb) x/8gx $rbp-0x18
+0x7ffc43fad708: 0x8bb5c4e6cb42f3f8      0x61f01f2febd8ef2d
+0x7ffc43fad718: 0xfcadd8da2bbd3500      0x00007ffc43fad7c0
+0x7ffc43fad728: 0x000079b60c48f1ca      0x0000000000000000
+0x7ffc43fad738: 0x00007ffc43fad848      0x0000000100000000
+(gdb) c
+Continuing.
+0x8bb5c4e6cb42f3f8
+You input: 8bb5c4e6cb42f3f8
+The correct answer is: 8bb5c4e6cb42f3f8
+The random value has been set!
+
+Random value: 
+Breakpoint 5, 0x00005df6d7e7bd02 in main ()
+(gdb) x/8gx $rbp-0x18
+0x7ffc43fad708: 0xee875c62be1fa6d0      0x8bb5c4e6cb42f3f8
+0x7ffc43fad718: 0xfcadd8da2bbd3500      0x00007ffc43fad7c0
+0x7ffc43fad728: 0x000079b60c48f1ca      0x0000000000000000
+0x7ffc43fad738: 0x00007ffc43fad848      0x0000000100000000
+(gdb) c
+Continuing.
+0xee875c62be1fa6d0
+You input: ee875c62be1fa6d0
+The correct answer is: ee875c62be1fa6d0
+You win! Here is your flag:
+pwn.college{wY95WkIw1Wk1DAtUqq-uoqoOzy6.ddDNywSM3QDN3EzW}
+
+
+### Goodbye!
+```
+I didnt have any clue what the code meant. I use Chat to decipher it.
+
+
+##### GDB Scripting
+```
+ubuntu@debugging-refresher~gdb-scripting:~/Numbers_As_Strings$ /challenge/embryogdb_level5 
+The program is restarting under the control of gdb! You can run the program with the gdb command `run`.
+
+GNU gdb (Ubuntu 15.1-1ubuntu1~24.04.1) 15.1
+Copyright (C) 2024 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<https://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+    <http://www.gnu.org/software/gdb/documentation/>.
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from /challenge/embryogdb_level5...
+
+--Type <RET> for more, q to quit, c to continue without paging--c
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.ubuntu.com>
+Enable debuginfod for this session? (y or [n]) n
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+(No debugging symbols found in /challenge/embryogdb_level5)
+(gdb) starti
+Starting program: /challenge/embryogdb_level5 
+
+Program stopped.
+0x00007d80d8067540 in _start () from /lib64/ld-linux-x86-64.so.2
+(gdb) source /home/hacker/Numbers_As_Strings/GDB_Scripting.gdb
+Breakpoint 1 at 0x58f3aa50bde8
+(gdb) c
+Continuing.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+###
+### Welcome to /challenge/embryogdb_level5!
+###
+
+GDB is a very powerful dynamic analysis tool which you can use in order to understand the state of a program throughout
+its execution. You will become familiar with some of gdb's capabilities in this module.
+
+We write code in order to express an idea which can be reproduced and refined. We can think of our analysis as a program
+which injests the target to be analyzed as data. As the saying goes, code is data and data is code.
+
+While using gdb interactively as we've done with the past levels is incredibly powerful, another powerful tool is gdb
+scripting. By scripting gdb, you can very quickly create a custom-tailored program analysis tool. If you know how to
+interact with gdb, you already know how to write a gdb script--the syntax is exactly the same. You can write your
+commands to some file, for example `x.gdb`, and then launch gdb using the flag `-x <PATH_TO_SCRIPT>`. This file will
+execute all of the gdb commands after gdb launches. Alternatively, you can execute individual commands with `-ex
+'<COMMAND>'`. You can pass multiple commands with multiple `-ex` arguments. Finally, you can have some commands be
+always executed for any gdb session by putting them in `~/.gdbinit`. You probably want to put `set disassembly-flavor
+intel` in there.
+
+Within gdb scripting, a very powerful construct is breakpoint commands. Consider the following gdb script:
+
+  start
+  break *main+42
+  commands
+    x/gx $rbp-0x32
+    continue
+  end
+  continue
+
+In this case, whenever we hit the instruction at `main+42`, we will output a particular local variable and then continue
+execution.
+
+Now consider a similar, but slightly more advanced script using some commands you haven't yet seen:
+
+  start
+  break *main+42
+  commands
+    silent
+    set $local_variable = *(unsigned long long*)($rbp-0x32)
+    printf "Current value: %llx\n", $local_variable
+    continue
+  end
+  continue
+
+In this case, the `silent` indicates that we want gdb to not report that we have hit a breakpoint, to make the output a
+bit cleaner. Then we use the `set` command to define a variable within our gdb session, whose value is our local
+variable. Finally, we output the current value using a formatted string.
+
+Use gdb scripting to help you collect the random values.
+
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0x000058f3aa50bd94 in main ()
+(gdb) c
+Continuing.
+The random value has been set!
+
+Current value: eeadac9f45a97b91
+Random value: eeadac9f45a97b91                                 
+You input: eeadac9f45a97b91
+The correct answer is: eeadac9f45a97b91
+The random value has been set!
+
+Current value: cd725db3e803b328
+Random value: cd725db3e803b328
+You input: cd725db3e803b328
+The correct answer is: cd725db3e803b328
+The random value has been set!
+
+Current value: c8b43d0931a5c7a1
+Random value: c8b43d0931a5c7a1
+You input: c8b43d0931a5c7a1
+The correct answer is: c8b43d0931a5c7a1
+The random value has been set!
+
+Current value: d7067b2378c56584
+Random value: d7067b2378c56584
+You input: d7067b2378c56584
+The correct answer is: d7067b2378c56584
+The random value has been set!
+
+Current value: b86d04ae0025b91c
+Random value: b86d04ae0025b91c
+You input: b86d04ae0025b91c
+The correct answer is: b86d04ae0025b91c
+The random value has been set!
+
+Current value: 34c6fe3c7a443599
+Random value: 34c6fe3c7a443599
+You input: 34c6fe3c7a443599
+The correct answer is: 34c6fe3c7a443599
+The random value has been set!
+
+Current value: abff1318be53a641
+Random value: abff1318be53a641
+You input: abff1318be53a641
+The correct answer is: abff1318be53a641
+The random value has been set!
+
+Current value: ef47c054b173635f
+Random value: ef47c054b173635f
+You input: ef47c054b173635f
+The correct answer is: ef47c054b173635f
+You win! Here is your flag:
+pwn.college{4SxyppPrGah4RfpaKG7d92nR98x.dhDNywSM3QDN3EzW}
+
+
+### Goodbye!
+```
+
+```
+set disassembly-flavor intel
+
+break *main+823
+commands
+  silent
+  set $local_variable = *(unsigned long long*)($rbp-0x18)
+  printf "Current value: %llx\n", $local_variable
+  continue
+end
+```
+
+##### Modifying Data
+```
+set disassembly-flavor intel
+
+break *main+757
+commands
+    silent
+    set $rdx = $rax
+    continue
+end
+```
+This worked, but not exacly as I wanted or expected.
+##### Modifying Execution
+```
+(gdb) c
+Continuing.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+###
+### Welcome to /challenge/embryogdb_level7!
+###
+
+GDB is a very powerful dynamic analysis tool which you can use in order to understand the state of a program throughout
+its execution. You will become familiar with some of gdb's capabilities in this module.
+
+As we demonstrated in the previous level, gdb has FULL control over the target process. Under normal circumstances, gdb
+running as your regular user cannot attach to a privileged process. This is why gdb isn't a massive security issue which
+would allow you to just immediately solve all the levels. Nevertheless, gdb is still an extremely powerful tool.
+
+Running within this elevated instance of gdb gives you elevated control over the entire system. To clearly demonstrate
+this, see what happens when you run the command `call (void)win()`.
+
+As it turns out, all of the levels other levels in module could be solved in this way.
+
+GDB is very powerful!
+
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0x000064f6d1fb6bc1 in main ()
+(gdb) call (void)win()
+You win! Here is your flag:
+pwn.college{AiX-NH1EFlTqo2ptSp7Prtap0PF.dBTNywSM3QDN3EzW}
+
+
+```
+
+##### Broken Function
+```
+(gdb) run
+Starting program: /challenge/embryogdb_level8 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+###
+### Welcome to /challenge/embryogdb_level8!
+###
+
+GDB is a very powerful dynamic analysis tool which you can use in order to understand the state of a program throughout
+its execution. You will become familiar with some of gdb's capabilities in this module.
+
+As we demonstrated in the previous level, gdb has FULL control over the target process. Under normal circumstances, gdb
+running as your regular user cannot attach to a privileged process. This is why gdb isn't a massive security issue which
+would allow you to just immediately solve all the levels. Nevertheless, gdb is still an extremely powerful tool.
+
+Running within this elevated instance of gdb gives you elevated control over the entire system. To clearly demonstrate
+this, see what happens when you run the command `call (void)win()`.
+
+Note that this will _not_ get you the flag (it seems that we broke the win function!), so you'll need to work a bit
+harder to get this flag!
+
+As it turns out, all of the levels other levels in module could be solved in this way.
+
+GDB is very powerful!
+
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0x00005b7833f7ebfa in main ()
+(gdb) call (void) win()
+
+Breakpoint 1, 0x00005b7833f7e96b in win ()
+The program being debugged stopped while in a function called from GDB.
+Evaluation of the expression containing the function
+(win) will be abandoned.
+When the function is done executing, GDB will silently stop.
+(gdb) x/i $rip
+=> 0x5b7833f7e96b <win+8>:      sub    $0x10,%rsp
+(gdb) push %rbp
+Undefined command: "push".  Try "help".
+(gdb) set $rip = win+35
+(gdb) x/i $rip
+=> 0x5b7833f7e986 <win+35>:     lea    0x744(%rip),%rax        # 0x5b7833f7f0d1
+(gdb) c
+Continuing.
+You win! Here is your flag:
+pwn.college{kProVod1auHfASbLDVx-Rzygz5k.QX5MzMzwSM3QDN3EzW}
+
+
+(gdb) 
+```
+
+I DONT KNOW!
+
+## Building A Web Server
