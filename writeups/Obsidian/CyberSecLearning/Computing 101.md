@@ -6166,3 +6166,1151 @@ pwn.college{kProVod1auHfASbLDVx-Rzygz5k.QX5MzMzwSM3QDN3EzW}
 I DONT KNOW!
 
 ## Building A Web Server
+
+##### Socket
+```
+.intel_syntax noprefix
+.global _start
+_start:       
+    mov rax, 41             # System call number for sys_socket (64-bit Linux)
+    mov rdi, 2              # Argument 1: Domain = AF_INET (IPv4)
+    mov rsi, 1              # Argument 2: Type = SOCK_STREAM (TCP)
+    mov rdx, 0              # Argument 3: Protocol = 0 (IPPROT_IP automatic choice)
+    syscall
+    mov rax, 60
+    mov rdi, 0
+    syscall
+
+```
+
+##### Bind
+```
+.intel_syntax noprefix
+.global _start
+_start:       
+    mov rax, 41             # System call number for sys_socket (64-bit Linux)
+    mov rdi, 2              # Argument 1: Domain = AF_INET (IPv4)
+    mov rsi, 1              # Argument 2: Type = SOCK_STREAM (TCP)
+    mov rdx, 0              # Argument 3: Protocol = 0 (IPPROT_IP automatic choice)
+    syscall
+    mov r8, rax             # rax held the fd
+    sub rsp, 16
+    mov WORD PTR [rsp], 2       # sin_family = AF_INET
+    mov WORD PTR [rsp + 2], 0x5000  # sin_port = 80 And backward due to Big Endian
+    mov DWORD PTR [rsp + 4], 0x00000000 # sin_addr = 0.0.0.0
+    mov QWORD PTR [rsp + 8], 0  # sin_zero padding
+    mov rax, 49             # Bind syscall
+    mov rdi, r8             # The file descriptor
+    mov rsi, rsp            # The pointer to struct sockaddr
+    mov rdx, 16             # Size to read
+    syscall
+    mov rax, 60
+    mov rdi, 0
+    syscall
+
+```
+
+##### Listen
+```
+.intel_syntax noprefix
+.global _start
+_start:       
+    mov rax, 41             # System call number for sys_socket (64-bit Linux)
+    mov rdi, 2              # Argument 1: Domain = AF_INET (IPv4)
+    mov rsi, 1              # Argument 2: Type = SOCK_STREAM (TCP)
+    mov rdx, 0              # Argument 3: Protocol = 0 (IPPROT_IP automatic choice)
+    syscall
+    mov r8, rax             # rax held the fd
+    sub rsp, 16
+    mov WORD PTR [rsp], 2       # sin_family = AF_INET
+    mov WORD PTR [rsp + 2], 0x5000  # sin_port = 80 And backward due to Big Endian
+    mov DWORD PTR [rsp + 4], 0x00000000 # sin_addr = 0.0.0.0
+    mov QWORD PTR [rsp + 8], 0  # sin_zero padding
+    mov rax, 49             # Bind syscall
+    mov rdi, r8             # The file descriptor
+    mov rsi, rsp            # The pointer to struct sockaddr
+    mov rdx, 16             # Size to read
+    syscall
+    mov rax, 50
+    mov rdi, r8
+    mov rsi, 0
+    syscall
+    mov rax, 60
+    mov rdi, 0
+    syscall
+
+```
+
+##### Accept
+```
+.intel_syntax noprefix
+.global _start
+_start:       
+    mov rax, 41             # System call number for sys_socket (64-bit Linux)
+    mov rdi, 2              # Argument 1: Domain = AF_INET (IPv4)
+    mov rsi, 1              # Argument 2: Type = SOCK_STREAM (TCP)
+    mov rdx, 0              # Argument 3: Protocol = 0 (IPPROT_IP automatic choice)
+    syscall
+    mov r8, rax             # rax held the fd
+    sub rsp, 16
+    mov WORD PTR [rsp], 2       # sin_family = AF_INET
+    mov WORD PTR [rsp + 2], 0x5000  # sin_port = 80 And backward due to Big Endian
+    mov DWORD PTR [rsp + 4], 0x00000000 # sin_addr = 0.0.0.0
+    mov QWORD PTR [rsp + 8], 0  # sin_zero padding
+    mov rax, 49             # Bind syscall
+    mov rdi, r8             # The file descriptor
+    mov rsi, rsp            # The pointer to struct sockaddr
+    mov rdx, 16             # Size to read
+    syscall
+    mov rax, 50
+    mov rdi, r8
+    mov rsi, 0
+    syscall
+    mov rax, 43
+    mov rdi, r8
+    mov rsi, 0
+    mov rdx, 0
+    syscall
+    mov r9, rax
+    sub rsp, 1024 # Allocate buffer for the HTTP request
+    # read(client_fd, buffer, 1024)
+    mov rax, 0 # syscall 0 = read
+    mov rdi, r9
+    mov rsi, rsp
+    mov rdx, 1024
+    syscall
+    sub rsp, 20  # 48 54 54 50 2f 31 2e 30 20 32 30 30 20 4f 4b 0d 0a 0d 0a 00
+    mov rax, 0x302e312f50545448
+    mov QWORD PTR [rsp], rax
+    mov rax, 0x0d4b4f2030303220
+    mov QWORD PTR [rsp+8], rax
+    mov DWORD PTR [rsp+16], 0x000a0d0a
+    mov rax, 1
+    mov rdi, r9
+    mov rsi, rsp
+    mov rdx, 19
+    syscall
+    mov rax, 3 # close(client_fd)
+    mov rdi, r9
+    syscall
+    mov rax, 60
+    mov rdi, 0
+    syscall
+
+```
+I had to read() even though it wasn't specified at all.
+
+##### Dynamic Response
+The challenge doesn't specify that I have to send a response back as OK and 200 whatever. I did use the AI to analyze the log to understand it. I understand the code. And I built the barebone logic. So it's ok.
+
+```
+.intel_syntax noprefix
+.global _start
+
+_start:
+    mov rax, 41             # System call number for sys_socket (64-bit Linux)
+    mov rdi, 2              # Argument 1: Domain = AF_INET (IPv4)
+    mov rsi, 1              # Argument 2: Type = SOCK_STREAM (TCP)
+    mov rdx, 0              # Argument 3: Protocol = 0 (automatic choice)
+    syscall
+
+    mov r8, rax             # rax held the listening socket fd
+
+    sub rsp, 16
+    mov WORD PTR [rsp], 2            # sin_family = AF_INET
+    mov WORD PTR [rsp + 2], 0x5000   # sin_port = 80 in network byte order
+    mov DWORD PTR [rsp + 4], 0       # sin_addr = 0.0.0.0
+    mov QWORD PTR [rsp + 8], 0       # sin_zero padding
+
+    mov rax, 49             # bind syscall
+    mov rdi, r8             # listening socket file descriptor
+    mov rsi, rsp            # pointer to struct sockaddr_in
+    mov rdx, 16             # size of sockaddr_in
+    syscall
+
+    add rsp, 16
+
+    mov rax, 50             # listen syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # backlog = 0
+    syscall
+
+    mov rax, 43             # accept syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # sockaddr = NULL
+    mov rdx, 0              # socklen = NULL
+    syscall
+
+    mov r9, rax             # r9 = accepted client socket fd
+
+    sub rsp, 512            # Allocate buffer for the HTTP request
+
+    # read(client_fd, buffer, 512)
+    mov rax, 0              # syscall 0 = read
+    mov rdi, r9
+    mov rsi, rsp
+    mov rdx, 512
+    syscall                 # rax holds how many bytes were read
+
+    mov r10, rax            # Save number of request bytes read
+
+    mov rsi, rsp            # RSI = start of the HTTP request buffer
+    add rsi, 4              # Skip "GET ", now RSI points to the path
+
+    # --- STEP 3: Find the space character after the path ---
+    mov rdi, rsi            # Copy path pointer to RDI for scanning
+
+    # Compute the address immediately after the received request
+    lea r11, [rsp + r10]
+
+find_end:
+    cmp rdi, r11            # Did we reach the end of received data?
+    jae error_exit
+
+    cmp BYTE PTR [rdi], 0x20 # Check if current character is a space
+    je null_terminate       # If it is a space, we found the path end
+
+    inc rdi                 # Move to the next character
+    jmp find_end
+
+null_terminate:
+    # --- STEP 4: Replace the space with a null byte ---
+    mov BYTE PTR [rdi], 0   # The path in RSI is now null-terminated
+
+    # --- STEP 5: Open the file ---
+    mov rax, 2              # System call number for sys_open
+    mov rdi, rsi            # Pointer to filename
+    mov rsi, 0              # O_RDONLY
+    mov rdx, 0              # mode is unused for O_RDONLY
+    syscall
+
+    mov r13, rax            # r13 = opened file fd
+
+    sub rsp, 1024           # Allocate buffer for the file contents
+
+    # --- STEP 6: Read the file ---
+    mov rax, 0              # sys_read
+    mov rdi, r13            # file descriptor
+    mov rsi, rsp            # file buffer
+    mov rdx, 1024           # read up to 1024 bytes
+    syscall
+
+    cmp rax, 0
+    jl error_exit           # Negative means the file read failed
+
+    mov r12, rax            # Save the exact number of file bytes read
+
+    # --- STEP 7: Close the file descriptor ---
+    mov rax, 3              # sys_close
+    mov rdi, r13            # file fd
+    syscall
+
+    # --- STEP 8: Build the HTTP response header ---
+    sub rsp, 24
+
+    # Bytes 0-7: "HTTP/1.0"
+    mov rax, 0x302e312f50545448
+    mov QWORD PTR [rsp], rax
+
+    # Bytes 8-15: " 200 OK\r"
+    mov rax, 0x0d4b4f2030303220
+    mov QWORD PTR [rsp + 8], rax
+
+    # Bytes 16-18: "\n\r\n"
+    mov DWORD PTR [rsp + 16], 0x000a0d0a
+
+    # --- STEP 9: Send the HTTP header ---
+    mov rax, 1              # sys_write
+    mov rdi, r9             # client socket fd
+    mov rsi, rsp            # pointer to HTTP header
+    mov rdx, 19             # exact header length
+    syscall
+
+    add rsp, 24             # Return RSP to the file buffer
+
+    # --- STEP 10: Send the file contents ---
+    mov rax, 1              # sys_write
+    mov rdi, r9             # client socket fd
+    mov rsi, rsp            # pointer to file contents
+    mov rdx, r12            # exact number of file bytes read
+    syscall
+
+    # --- STEP 11: Close the client socket ---
+    mov rax, 3              # sys_close
+    mov rdi, r9             # client socket fd
+    syscall
+
+    # --- STEP 12: Exit successfully ---
+    mov rax, 60             # sys_exit
+    xor rdi, rdi            # exit status = 0
+    syscall
+
+error_exit:
+    mov rax, 60             # sys_exit
+    mov rdi, 1              # exit status = 1
+    syscall
+
+```
+
+##### Iterative GET Server
+```
+.intel_syntax noprefix
+.global _start
+
+_start:
+    mov rax, 41             # System call number for sys_socket (64-bit Linux)
+    mov rdi, 2              # Argument 1: Domain = AF_INET (IPv4)
+    mov rsi, 1              # Argument 2: Type = SOCK_STREAM (TCP)
+    mov rdx, 0              # Argument 3: Protocol = 0 (automatic choice)
+    syscall
+
+    mov r8, rax             # rax held the listening socket fd
+
+    sub rsp, 16
+    mov WORD PTR [rsp], 2            # sin_family = AF_INET
+    mov WORD PTR [rsp + 2], 0x5000   # sin_port = 80 in network byte order
+    mov DWORD PTR [rsp + 4], 0       # sin_addr = 0.0.0.0
+    mov QWORD PTR [rsp + 8], 0       # sin_zero padding
+
+    mov rax, 49             # bind syscall
+    mov rdi, r8             # listening socket file descriptor
+    mov rsi, rsp            # pointer to struct sockaddr_in
+    mov rdx, 16             # size of sockaddr_in
+    syscall
+
+    add rsp, 16
+
+    mov rax, 50             # listen syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # backlog = 0
+    syscall
+
+    mov rax, 43             # accept syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # sockaddr = NULL
+    mov rdx, 0              # socklen = NULL
+    syscall
+
+    mov r9, rax             # r9 = accepted client socket fd
+
+    sub rsp, 512            # Allocate buffer for the HTTP request
+
+    # read(client_fd, buffer, 512)
+    mov rax, 0              # syscall 0 = read
+    mov rdi, r9
+    mov rsi, rsp
+    mov rdx, 512
+    syscall                 # rax holds how many bytes were read
+
+    mov r10, rax            # Save number of request bytes read
+
+    mov rsi, rsp            # RSI = start of the HTTP request buffer
+    add rsi, 4              # Skip "GET ", now RSI points to the path
+
+    # --- STEP 3: Find the space character after the path ---
+    mov rdi, rsi            # Copy path pointer to RDI for scanning
+
+    # Compute the address immediately after the received request
+    lea r11, [rsp + r10]
+
+find_end:
+    cmp rdi, r11            # Did we reach the end of received data?
+    jae error_exit
+
+    cmp BYTE PTR [rdi], 0x20 # Check if current character is a space
+    je null_terminate       # If it is a space, we found the path end
+
+    inc rdi                 # Move to the next character
+    jmp find_end
+
+null_terminate:
+    # --- STEP 4: Replace the space with a null byte ---
+    mov BYTE PTR [rdi], 0   # The path in RSI is now null-terminated
+
+    # --- STEP 5: Open the file ---
+    mov rax, 2              # System call number for sys_open
+    mov rdi, rsi            # Pointer to filename
+    mov rsi, 0              # O_RDONLY
+    mov rdx, 0              # mode is unused for O_RDONLY
+    syscall
+
+    mov r13, rax            # r13 = opened file fd
+
+    sub rsp, 1024           # Allocate buffer for the file contents
+
+    # --- STEP 6: Read the file ---
+    mov rax, 0              # sys_read
+    mov rdi, r13            # file descriptor
+    mov rsi, rsp            # file buffer
+    mov rdx, 1024           # read up to 1024 bytes
+    syscall
+
+    cmp rax, 0
+    jl error_exit           # Negative means the file read failed
+
+    mov r12, rax            # Save the exact number of file bytes read
+
+    # --- STEP 7: Close the file descriptor ---
+    mov rax, 3              # sys_close
+    mov rdi, r13            # file fd
+    syscall
+
+    # --- STEP 8: Build the HTTP response header ---
+    sub rsp, 24
+
+    # Bytes 0-7: "HTTP/1.0"
+    mov rax, 0x302e312f50545448
+    mov QWORD PTR [rsp], rax
+
+    # Bytes 8-15: " 200 OK\r"
+    mov rax, 0x0d4b4f2030303220
+    mov QWORD PTR [rsp + 8], rax
+
+    # Bytes 16-18: "\n\r\n"
+    mov DWORD PTR [rsp + 16], 0x000a0d0a
+
+    # --- STEP 9: Send the HTTP header ---
+    mov rax, 1              # sys_write
+    mov rdi, r9             # client socket fd
+    mov rsi, rsp            # pointer to HTTP header
+    mov rdx, 19             # exact header length
+    syscall
+
+    add rsp, 24             # Return RSP to the file buffer
+
+    # --- STEP 10: Send the file contents ---
+    mov rax, 1              # sys_write
+    mov rdi, r9             # client socket fd
+    mov rsi, rsp            # pointer to file contents
+    mov rdx, r12            # exact number of file bytes read
+    syscall
+
+    # --- STEP 11: Close the client socket ---
+    mov rax, 3              # sys_close
+    mov rdi, r9             # client socket fd
+    syscall
+
+    # --- STEP 12: Exit successfully ---
+    mov rax, 60             # sys_exit
+    xor rdi, rdi            # exit status = 0
+    syscall
+
+error_exit:
+    mov rax, 60             # sys_exit
+    mov rdi, 1              # exit status = 1
+    syscall
+
+```
+
+##### Concurrent GET Server
+```
+.intel_syntax noprefix
+.global _start
+
+_start:
+    mov rax, 41             # System call number for sys_socket (64-bit Linux)
+    mov rdi, 2              # Argument 1: Domain = AF_INET (IPv4)
+    mov rsi, 1              # Argument 2: Type = SOCK_STREAM (TCP)
+    mov rdx, 0              # Argument 3: Protocol = 0 (automatic choice)
+    syscall
+
+    mov r8, rax             # rax held the listening socket fd
+
+    sub rsp, 16
+    mov WORD PTR [rsp], 2            # sin_family = AF_INET
+    mov WORD PTR [rsp + 2], 0x5000   # sin_port = 80 in network byte order
+    mov DWORD PTR [rsp + 4], 0       # sin_addr = 0.0.0.0
+    mov QWORD PTR [rsp + 8], 0       # sin_zero padding
+
+    mov rax, 49             # bind syscall
+    mov rdi, r8             # listening socket file descriptor
+    mov rsi, rsp            # pointer to struct sockaddr_in
+    mov rdx, 16             # size of sockaddr_in
+    syscall
+
+    add rsp, 16
+
+    mov rax, 50             # listen syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # backlog = 0
+    syscall
+
+    loop:
+    mov rax, 43             # accept syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # sockaddr = NULL
+    mov rdx, 0              # socklen = NULL
+    syscall
+
+    mov r9, rax             # r9 = accepted client socket fd
+    mov rax, 57             # FORKING
+    syscall
+
+    parent_process:
+    cmp rax, 0
+    jl error_exit           # If RAX is negative, fork failed
+    je child_process
+    # --- STEP 11: Close the client socket ---
+    mov rax, 3              # sys_close
+    mov rdi, r9             # client socket fd
+    syscall
+    jmp loop
+
+    child_process:
+    mov rax, 3              # sys_close
+    mov rdi, r8             # parent socket fd
+    syscall
+    sub rsp, 512            # Allocate buffer for the HTTP request
+    # read(client_fd, buffer, 512)
+    mov rax, 0              # syscall 0 = read
+    mov rdi, r9
+    mov rsi, rsp
+    mov rdx, 512
+    syscall                 # rax holds how many bytes were read
+
+    mov r10, rax            # Save number of request bytes read
+
+    mov rsi, rsp            # RSI = start of the HTTP request buffer
+    add rsi, 4              # Skip "GET ", now RSI points to the path
+
+    # --- STEP 3: Find the space character after the path ---
+    mov rdi, rsi            # Copy path pointer to RDI for scanning
+
+    # Compute the address immediately after the received request
+    lea r11, [rsp + r10]
+
+find_end:
+    cmp rdi, r11            # Did we reach the end of received data?
+    jae error_exit
+
+    cmp BYTE PTR [rdi], 0x20 # Check if current character is a space
+    je null_terminate       # If it is a space, we found the path end
+
+    inc rdi                 # Move to the next character
+    jmp find_end
+
+null_terminate:
+    # --- STEP 4: Replace the space with a null byte ---
+    mov BYTE PTR [rdi], 0   # The path in RSI is now null-terminated
+
+    # --- STEP 5: Open the file ---
+    mov rax, 2              # System call number for sys_open
+    mov rdi, rsi            # Pointer to filename
+    mov rsi, 0              # O_RDONLY
+    mov rdx, 0              # mode is unused for O_RDONLY
+    syscall
+
+    mov r13, rax            # r13 = opened file fd
+
+    sub rsp, 1024           # Allocate buffer for the file contents
+
+    # --- STEP 6: Read the file ---
+    mov rax, 0              # sys_read
+    mov rdi, r13            # file descriptor
+    mov rsi, rsp            # file buffer
+    mov rdx, 1024           # read up to 1024 bytes
+    syscall
+
+    cmp rax, 0
+    jl error_exit           # Negative means the file read failed
+
+    mov r12, rax            # Save the exact number of file bytes read
+
+    # --- STEP 7: Close the file descriptor ---
+    mov rax, 3              # sys_close
+    mov rdi, r13            # file fd
+    syscall
+
+    # --- STEP 8: Build the HTTP response header ---
+    sub rsp, 24
+
+    # Bytes 0-7: "HTTP/1.0"
+    mov rax, 0x302e312f50545448
+    mov QWORD PTR [rsp], rax
+
+    # Bytes 8-15: " 200 OK\r"
+    mov rax, 0x0d4b4f2030303220
+    mov QWORD PTR [rsp + 8], rax
+
+    # Bytes 16-18: "\n\r\n"
+    mov DWORD PTR [rsp + 16], 0x000a0d0a
+
+    # --- STEP 9: Send the HTTP header ---
+    mov rax, 1              # sys_write
+    mov rdi, r9             # client socket fd
+    mov rsi, rsp            # pointer to HTTP header
+    mov rdx, 19             # exact header length
+    syscall
+
+    add rsp, 24             # Return RSP to the file buffer
+
+    # --- STEP 10: Send the file contents ---
+    mov rax, 1              # sys_write
+    mov rdi, r9             # client socket fd
+    mov rsi, rsp            # pointer to file contents
+    mov rdx, r12            # exact number of file bytes read
+    syscall
+    # Exit fd
+    mov rax, 3
+    mov rdi, r9
+    syscall
+
+    # --- STEP 12: Exit successfully ---
+    mov rax, 60             # sys_exit
+    xor rdi, rdi            # exit status = 0
+    syscall
+
+error_exit:
+    mov rax, 60             # sys_exit
+    mov rdi, 1              # exit status = 1
+    syscall
+
+```
+After forking, the parent must close the child fd and the child must close the parent fd.
+
+##### Concurrent POST Server
+```
+.intel_syntax noprefix
+.global _start
+
+_start:
+    mov rax, 41             # System call number for sys_socket (64-bit Linux)
+    mov rdi, 2              # Argument 1: Domain = AF_INET (IPv4)
+    mov rsi, 1              # Argument 2: Type = SOCK_STREAM (TCP)
+    mov rdx, 0              # Argument 3: Protocol = 0 (automatic choice)
+    syscall
+
+    mov r8, rax             # rax held the listening socket fd
+
+    sub rsp, 16
+    mov WORD PTR [rsp], 2            # sin_family = AF_INET
+    mov WORD PTR [rsp + 2], 0x5000   # sin_port = 80 in network byte order
+    mov DWORD PTR [rsp + 4], 0       # sin_addr = 0.0.0.0
+    mov QWORD PTR [rsp + 8], 0       # sin_zero padding
+
+    mov rax, 49             # bind syscall
+    mov rdi, r8             # listening socket file descriptor
+    mov rsi, rsp            # pointer to struct sockaddr_in
+    mov rdx, 16             # size of sockaddr_in
+    syscall
+
+    add rsp, 16
+
+    mov rax, 50             # listen syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # backlog = 0
+    syscall
+
+    loop:
+    mov rax, 43             # accept syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # sockaddr = NULL
+    mov rdx, 0              # socklen = NULL
+    syscall
+
+    mov r9, rax             # r9 = accepted client socket fd
+    mov rax, 57             # FORKING
+    syscall
+
+    parent_process:
+    cmp rax, 0
+    jl error_exit           # If RAX is negative, fork failed
+    je child_process
+    # --- STEP 11: Close the client socket ---
+    mov rax, 3              # sys_close
+    mov rdi, r9             # client socket fd
+    syscall
+    jmp loop
+
+        child_process:
+    mov rax, 3
+    mov rdi, r8
+    syscall
+
+    sub rsp, 512
+
+    # read(client_fd, buffer, 512)
+    mov rax, 0
+    mov rdi, r9
+    mov rsi, rsp
+    mov rdx, 512
+    syscall
+
+    cmp rax, 0
+    jle error_exit
+
+    mov r10, rax            # total request bytes
+    mov r14, rsp            # r14 = beginning of entire request
+
+
+    # -------------------------------------------------
+    # Find URL path
+    #
+    # Request starts:
+    # POST /tmp/file HTTP/1.1
+    #      ^
+    #      rsp + 5
+    # -------------------------------------------------
+
+    lea rsi, [r14 + 5]      # rsi = path start
+    mov rdi, rsi
+
+    lea r11, [r14 + r10]    # end of received request
+
+find_path_end:
+    cmp rdi, r11
+    jae error_exit
+
+    cmp BYTE PTR [rdi], 0x20
+    je path_found
+
+    inc rdi
+    jmp find_path_end
+
+path_found:
+    mov BYTE PTR [rdi], 0   # null terminate pathname
+
+    # IMPORTANT:
+    # preserve pathname because RSI will be used later
+    mov r15, rsi            # r15 = pathname
+
+
+    # -------------------------------------------------
+    # Find \r\n\r\n to locate POST body
+    # -------------------------------------------------
+
+    mov rbx, r14            # scan from beginning
+    mov rcx, r10            # bytes remaining
+
+find_body_loop:
+    cmp rcx, 4
+    jl error_exit
+
+    cmp BYTE PTR [rbx], 0x0d
+    jne next_byte
+    cmp BYTE PTR [rbx + 1], 0x0a
+    jne next_byte
+    cmp BYTE PTR [rbx + 2], 0x0d
+    jne next_byte
+    cmp BYTE PTR [rbx + 3], 0x0a
+    jne next_byte
+
+    # Found \r\n\r\n
+    add rbx, 4              # rbx = body pointer
+    sub rcx, 4              # rcx = bytes remaining = body size
+    jmp body_found
+
+next_byte:
+    inc rbx
+    dec rcx
+    jmp find_body_loop
+
+
+body_found:
+    # r15 = pathname
+    # rbx = POST body
+    # rcx = body length
+
+    mov r12, rcx            # preserve body length
+    mov r13, rbx            # preserve body pointer
+
+
+    # -------------------------------------------------
+    # open(path, O_WRONLY | O_CREAT, 0777)
+    # -------------------------------------------------
+
+    mov rax, 2              # sys_open
+    mov rdi, r15            # pathname
+    mov rsi, 65             # O_WRONLY | O_CREAT
+    mov rdx, 0777           # permissions
+    syscall
+
+    cmp rax, 0
+    jl error_exit
+
+    mov r14, rax            # file fd
+
+
+    # -------------------------------------------------
+    # write(file_fd, body, body_length)
+    # -------------------------------------------------
+
+    mov rax, 1
+    mov rdi, r14
+    mov rsi, r13
+    mov rdx, r12
+    syscall
+
+    cmp rax, 0
+    jl error_exit
+
+
+    # close file
+    mov rax, 3
+    mov rdi, r14
+    syscall
+
+
+    # -------------------------------------------------
+    # Send HTTP/1.0 200 OK\r\n\r\n
+    # -------------------------------------------------
+
+    sub rsp, 24
+
+    mov rax, 0x302e312f50545448
+    mov QWORD PTR [rsp], rax
+
+    mov rax, 0x0d4b4f2030303220
+    mov QWORD PTR [rsp + 8], rax
+
+    mov DWORD PTR [rsp + 16], 0x000a0d0a
+
+    mov rax, 1
+    mov rdi, r9
+    mov rsi, rsp
+    mov rdx, 19
+    syscall
+
+
+    # close client socket
+    mov rax, 3
+    mov rdi, r9
+    syscall
+
+    # Successful child exit
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+
+
+error_exit:
+    mov rax, 60
+    mov rdi, 1
+    syscall
+```
+
+##### Web Server
+```
+.intel_syntax noprefix
+.global _start
+
+_start:
+    mov rax, 41             # System call number for sys_socket (64-bit Linux)
+    mov rdi, 2              # Argument 1: Domain = AF_INET (IPv4)
+    mov rsi, 1              # Argument 2: Type = SOCK_STREAM (TCP)
+    mov rdx, 0              # Argument 3: Protocol = 0 (automatic choice)
+    syscall
+
+    mov r8, rax             # rax held the listening socket fd
+
+    sub rsp, 16
+    mov WORD PTR [rsp], 2            # sin_family = AF_INET
+    mov WORD PTR [rsp + 2], 0x5000   # sin_port = 80 in network byte order
+    mov DWORD PTR [rsp + 4], 0       # sin_addr = 0.0.0.0
+    mov QWORD PTR [rsp + 8], 0       # sin_zero padding
+
+    mov rax, 49             # bind syscall
+    mov rdi, r8             # listening socket file descriptor
+    mov rsi, rsp            # pointer to struct sockaddr_in
+    mov rdx, 16             # size of sockaddr_in
+    syscall
+
+    add rsp, 16
+
+    mov rax, 50             # listen syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # backlog = 0
+    syscall
+
+    loop:
+    mov rax, 43             # accept syscall
+    mov rdi, r8             # listening socket fd
+    mov rsi, 0              # sockaddr = NULL
+    mov rdx, 0              # socklen = NULL
+    syscall
+
+    mov r9, rax             # r9 = accepted client socket fd
+    mov rax, 57             # FORKING
+    syscall
+
+    parent_process:
+    cmp rax, 0
+    jl error_exit           # If RAX is negative, fork failed
+    je child_process
+    # --- STEP 11: Close the client socket ---
+    mov rax, 3              # sys_close
+    mov rdi, r9             # client socket fd
+    syscall
+    jmp loop
+
+    child_process:
+    mov rax, 3              # sys_close
+    mov rdi, r8             # parent socket fd
+    syscall
+    sub rsp, 512            # Allocate buffer for the HTTP request
+    # read(client_fd, buffer, 512)
+    mov rax, 0              # syscall 0 = read
+    mov rdi, r9
+    mov rsi, rsp
+    mov rdx, 512
+    syscall                 # rax holds how many bytes were read
+
+    mov r10, rax            # Save number of request bytes read
+    cmp r10, 0
+    jle error_exit
+
+    mov rsi, rsp            # RSI = start of the HTTP request buffer
+
+    detrinate_request:
+    cmp DWORD PTR [rsp], 0x20544547 # "GET " little-endian
+    je handle_get
+    cmp DWORD PTR [rsp], 0x54534f50 # "POST"
+    je handle_post
+    je error_exit
+
+    handle_get:
+    add rsi, 4              # Skip "GET ", now RSI points to the path
+
+    # --- STEP 3: Find the space character after the path ---
+    mov rdi, rsi            # Copy path pointer to RDI for scanning
+
+    # Compute the address immediately after the received request
+    lea r11, [rsp + r10]
+
+find_end_get:
+    cmp rdi, r11            # Did we reach the end of received data?
+    jae error_exit
+
+    cmp BYTE PTR [rdi], 0x20 # Check if current character is a space
+    je null_terminate_get       # If it is a space, we found the path end
+
+    inc rdi                 # Move to the next character
+    jmp find_end_get
+
+null_terminate_get:
+    # --- STEP 4: Replace the space with a null byte ---
+    mov BYTE PTR [rdi], 0   # The path in RSI is now null-terminated
+
+    # --- STEP 5: Open the file ---
+    mov rax, 2              # System call number for sys_open
+    mov rdi, rsi            # Pointer to filename
+    mov rsi, 0              # O_RDONLY
+    mov rdx, 0              # mode is unused for O_RDONLY
+    syscall
+
+    mov r13, rax            # r13 = opened file fd
+
+    sub rsp, 1024           # Allocate buffer for the file contents
+
+    # --- STEP 6: Read the file ---
+    mov rax, 0              # sys_read
+    mov rdi, r13            # file descriptor
+    mov rsi, rsp            # file buffer
+    mov rdx, 1024           # read up to 1024 bytes
+    syscall
+
+    cmp rax, 0
+    jl error_exit           # Negative means the file read failed
+
+    mov r12, rax            # Save the exact number of file bytes read
+
+    # --- STEP 7: Close the file descriptor ---
+    mov rax, 3              # sys_close
+    mov rdi, r13            # file fd
+    syscall
+
+    # --- STEP 8: Build the HTTP response header ---
+    sub rsp, 24
+
+    # Bytes 0-7: "HTTP/1.0"
+    mov rax, 0x302e312f50545448
+    mov QWORD PTR [rsp], rax
+
+    # Bytes 8-15: " 200 OK\r"
+    mov rax, 0x0d4b4f2030303220
+    mov QWORD PTR [rsp + 8], rax
+
+    # Bytes 16-18: "\n\r\n"
+    mov DWORD PTR [rsp + 16], 0x000a0d0a
+
+    # --- STEP 9: Send the HTTP header ---
+    mov rax, 1              # sys_write
+    mov rdi, r9             # client socket fd
+    mov rsi, rsp            # pointer to HTTP header
+    mov rdx, 19             # exact header length
+    syscall
+
+    add rsp, 24             # Return RSP to the file buffer
+
+    # --- STEP 10: Send the file contents ---
+    mov rax, 1              # sys_write
+    mov rdi, r9             # client socket fd
+    mov rsi, rsp            # pointer to file contents
+    mov rdx, r12            # exact number of file bytes read
+    syscall
+    # Exit fd
+    mov rax, 3
+    mov rdi, r9
+    syscall
+
+    # --- STEP 12: Exit successfully ---
+    mov rax, 60             # sys_exit
+    xor rdi, rdi            # exit status = 0
+    syscall
+
+    handle_post:
+    cmp rax, 0
+    jle error_exit
+
+    mov r10, rax            # total request bytes
+    mov r14, rsp            # r14 = beginning of entire request
+
+
+    # -------------------------------------------------
+    # Find URL path
+    #
+    # Request starts:
+    # POST /tmp/file HTTP/1.1
+    #      ^
+    #      rsp + 5
+    # -------------------------------------------------
+
+    lea rsi, [r14 + 5]      # rsi = path start
+    mov rdi, rsi
+
+    lea r11, [r14 + r10]    # end of received request
+
+find_path_end_post:
+    cmp rdi, r11
+    jae error_exit
+
+    cmp BYTE PTR [rdi], 0x20
+    je path_found_post
+
+    inc rdi
+    jmp find_path_end_post
+
+path_found_post:
+    mov BYTE PTR [rdi], 0   # null terminate pathname
+
+    # IMPORTANT:
+    # preserve pathname because RSI will be used later
+    mov r15, rsi            # r15 = pathname
+
+
+    # -------------------------------------------------
+    # Find \r\n\r\n to locate POST body
+    # -------------------------------------------------
+
+    mov rbx, r14            # scan from beginning
+    mov rcx, r10            # bytes remaining
+
+find_body_loop_post:
+    cmp rcx, 4
+    jl error_exit
+
+    cmp BYTE PTR [rbx], 0x0d
+    jne next_byte_post
+    cmp BYTE PTR [rbx + 1], 0x0a
+    jne next_byte_post
+    cmp BYTE PTR [rbx + 2], 0x0d
+    jne next_byte_post
+    cmp BYTE PTR [rbx + 3], 0x0a
+    jne next_byte_post
+
+    # Found \r\n\r\n
+    add rbx, 4              # rbx = body pointer
+    sub rcx, 4              # rcx = bytes remaining = body size
+    jmp body_found_post
+
+next_byte_post:
+    inc rbx
+    dec rcx
+    jmp find_body_loop_post
+
+
+body_found_post:
+    # r15 = pathname
+    # rbx = POST body
+    # rcx = body length
+
+    mov r12, rcx            # preserve body length
+    mov r13, rbx            # preserve body pointer
+
+
+    # -------------------------------------------------
+    # open(path, O_WRONLY | O_CREAT, 0777)
+    # -------------------------------------------------
+
+    mov rax, 2              # sys_open
+    mov rdi, r15            # pathname
+    mov rsi, 65             # O_WRONLY | O_CREAT
+    mov rdx, 0777           # permissions
+    syscall
+
+    cmp rax, 0
+    jl error_exit
+
+    mov r14, rax            # file fd
+
+
+    # -------------------------------------------------
+    # write(file_fd, body, body_length)
+    # -------------------------------------------------
+
+    mov rax, 1
+    mov rdi, r14
+    mov rsi, r13
+    mov rdx, r12
+    syscall
+
+    cmp rax, 0
+    jl error_exit
+
+
+    # close file
+    mov rax, 3
+    mov rdi, r14
+    syscall
+
+
+    # -------------------------------------------------
+    # Send HTTP/1.0 200 OK\r\n\r\n
+    # -------------------------------------------------
+
+    sub rsp, 24
+
+    mov rax, 0x302e312f50545448
+    mov QWORD PTR [rsp], rax
+
+    mov rax, 0x0d4b4f2030303220
+    mov QWORD PTR [rsp + 8], rax
+
+    mov DWORD PTR [rsp + 16], 0x000a0d0a
+
+    mov rax, 1
+    mov rdi, r9
+    mov rsi, rsp
+    mov rdx, 19
+    syscall
+
+
+    # close client socket
+    mov rax, 3
+    mov rdi, r9
+    syscall
+
+    # Successful child exit
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+
+
+error_exit:
+    mov rax, 60             # sys_exit
+    mov rdi, 1              # exit status = 1
+    syscall
+
+```
+
+FINISHED COMPUTING 101!!!!!!!!!
