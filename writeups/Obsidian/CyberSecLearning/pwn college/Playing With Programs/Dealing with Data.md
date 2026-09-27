@@ -1,5 +1,3 @@
-## Dealing with Data
-
 
 ##### Gleaning Challenge Insight
 1. Read the challenge!
